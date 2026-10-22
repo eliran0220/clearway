@@ -27,8 +27,14 @@ if (oneShot) {
 } else {
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
   console.log('Clearway agent. Ask a question, follow up, or type "exit".\n');
+  rl.on('SIGINT', () => rl.close());
   for (;;) {
-    const q = (await rl.question('you> ')).trim();
+    let q: string;
+    try {
+      q = (await rl.question('you> ')).trim();
+    } catch {
+      break; // Ctrl+C or Ctrl+D: exit quietly
+    }
     if (!q || q === 'exit' || q === 'quit') break;
     try {
       await ask(q);

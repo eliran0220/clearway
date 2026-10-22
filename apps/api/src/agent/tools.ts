@@ -250,6 +250,7 @@ export function createTools(getDb: () => Db) {
               airport: r.airport,
               name: nameOf(names, r.airport),
               score: r.score,
+              passengers12m: candidates.find((c) => c.airport === r.airport)?.passengersW1 ?? null,
               components: r.components.map((c) => ({
                 key: c.key,
                 label: c.label,
@@ -270,6 +271,7 @@ export function createTools(getDb: () => Db) {
               'A screening score, not an ROI or a feasibility verdict: a high score means worth a terminal-capacity study.',
               'Fixed ranges and weights are illustrative and uncalibrated (see the methodology).',
               'Delay pressure uses arrivals delayed 15+ minutes by reporting carriers (domestic flights).',
+              'The score ignores airport size; passengers12m shows it. Raise minPassengers to focus on larger airports.',
               'Load factor measures how full the planes are, not terminal use.',
             ],
           },
@@ -333,6 +335,7 @@ export function createTools(getDb: () => Db) {
             confidence: 'high',
             warnings,
             assumptions: [
+              'A delayed arrival is one arriving 15 or more minutes late (the BTS definition).',
               'Delay data covers flights by reporting carriers, mostly domestic.',
               'NAS share is the part of delay minutes the system attributes to airspace, traffic volume and airport operations: a proxy for airport congestion, not a direct measure.',
               'More flights does not by itself mean more congestion.',
@@ -461,6 +464,7 @@ export function createTools(getDb: () => Db) {
             warnings: warning ? [warning] : [],
             assumptions: [
               'Signals are proxies for demand pressure, not a measurement of unmet demand.',
+              'Delay rate counts arrivals 15 or more minutes late (the BTS definition), by reporting carriers.',
               'Thresholds: load factor 85%, supply gap above 0, delay rate 25% or NAS share above 40%.',
               'A documented constraint suggests a cause; it is not a measured effect.',
             ],

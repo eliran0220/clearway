@@ -82,6 +82,33 @@ export function withWeights(
   return { ...base, components, scenario };
 }
 
+/**
+ * Builds a weight scenario from partial overrides ("less weight on delays" -> { delay: 0.1 }).
+ * Overridden weights are kept; the remaining weight is spread over the other components
+ * in proportion to their weights in `base`. Deterministic, so the same request gives the same scenario.
+ */
+export function scenarioWeights(
+  base: ScreeningConfig,
+  overrides: Partial<Record<ComponentKey, number>>,
+  scenario: string,
+): ScreeningConfig {
+  const keys = Object.keys(base.components) as ComponentKey[];
+  const fixed = keys.filter((k) => overrides[k] !== undefined);
+  for (const k of fixed) {
+    const w = overrides[k] as number;
+    if (!(w >= 0 && w <= 1)) throw new Error(`Weight for ${k} must be between 0 and 1`);
+  }
+  const fixedSum = fixed.reduce((s, k) => s + (overrides[k] as number), 0);
+  if (fixedSum > 1 + 1e-9) throw new Error(`Overridden weights add up to ${round(fixedSum, 3)}, more than 1`);
+  const free = keys.filter((k) => overrides[k] === undefined);
+  const freeBase = free.reduce((s, k) => s + base.components[k].weight, 0);
+  if (free.length === 0 && Math.abs(fixedSum - 1) > 1e-9) throw new Error(`Weights must sum to 1, got ${round(fixedSum, 3)}`);
+  const weights: Partial<Record<ComponentKey, number>> = {};
+  for (const k of fixed) weights[k] = overrides[k] as number;
+  for (const k of free) weights[k] = freeBase > 0 ? ((1 - fixedSum) * base.components[k].weight) / freeBase : (1 - fixedSum) / free.length;
+  return withWeights(base, weights, scenario);
+}
+
 export function scoreCandidate(c: Candidate, cfg: ScreeningConfig = SCREENING_V1): ScreeningResult {
   if (c.passengersW1 == null) return { airport: c.airport, status: 'not_scored', reason: 'passenger total unavailable for the window' };
   if (c.passengersW1 < cfg.minPassengers) {

@@ -1,0 +1,30 @@
+[
+  {
+    "airport": "SNA",
+    "kind": "regulatory_cap",
+    "summary": "John Wayne Airport operates under a settlement agreement, extended in 2014 through 31 December 2030, that caps annual passengers: 11.8 million a year for 2021 to 2025, then 12.2 or 12.5 million a year for 2026 to 2030 depending on service levels. Traffic cannot grow past the cap whatever the demand.",
+    "sourceUrl": "https://cfo.oc.gov/sites/finance/files/2023-03/Series%202019%20Annual%20Continuing%20Disclosure%20FY%2021-22.pdf",
+    "asOf": "2023-03-01"
+  },
+  {
+    "airport": "SNA",
+    "kind": "operating_restrictions",
+    "summary": "The same agreement also restricts departures, operating hours (a night curfew) and passenger loading bridges; the County's curfew obligation runs through 2035.",
+    "sourceUrl": "https://www.ocair.com/about/administration/settlement-agreement/settlement-agreement-faqs/",
+    "asOf": "2026-10-22"
+  },
+  {
+    "airport": "SFO",
+    "kind": "runway_layout",
+    "summary": "SFO's two parallel runways are about 750 feet apart. In late March 2026 the FAA ended side-by-side landings on them, cutting the arrival rate from about 54 to 36 per hour.",
+    "sourceUrl": "https://avweb.com/aviation-news/faa-restricts-sfo-landings/",
+    "asOf": "2026-04-01"
+  },
+  {
+    "airport": "SFO",
+    "kind": "arrival_rate",
+    "summary": "From 12 August 2026 the FAA allowed staggered landings on the parallel runways in good weather, raising the limit to about 42 arrivals per hour; low visibility brings it back down. Runway 1R/19L was closed for repaving, with further relaxation expected after it reopens.",
+    "sourceUrl": "https://gatechecked.com/faa-bumps-up-allowed-arrival-count-at-san-francisco-international-airport-12235",
+    "asOf": "2026-08-12"
+  }
+]

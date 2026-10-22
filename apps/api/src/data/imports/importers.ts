@@ -2,7 +2,7 @@
 // ('running', then 'ok' or 'error'), so the app can always say which file and period a number came from.
 import { basename } from 'node:path';
 import { eq, inArray, sql } from 'drizzle-orm';
-import { airportDelaysMonthly, airports, routeSegmentsMonthly, sourceFetches, type Db } from '@clearway/db';
+import { airportConstraints, airportDelaysMonthly, airports, routeSegmentsMonthly, sourceFetches, type Db } from '@clearway/db';
 import { parseCsvText, readCsvFile, requireColumns } from '../csv';
 import {
   AIRPORTS_REQUIRED,
@@ -12,6 +12,7 @@ import {
   mapDelay,
   mapT100,
   pickAirports,
+  validateConstraints,
   type AirportRow,
   type DelayRow,
   type T100Row,
@@ -98,7 +99,7 @@ export async function importT100(db: Db, files: string[], log: Log = console.log
     const fetchId = await startFetch(db, 't100-segment-file', basename(scan.file), scan.months, scan.rows, scan.skipped ? `${scan.skipped} rows skipped` : undefined);
     const queue = makeQueue(CONCURRENCY);
     let batch: (T100Row & { importId: number })[] = [];
-    let nextLog = 100_000;
+    let nextLog = inserted + 100_000;
     const flush = async () => {
       if (batch.length === 0) return;
       const values = batch;
@@ -202,6 +203,25 @@ export async function importDelays(db: Db, file: string, log: Log = console.log)
     throw err;
   }
   return { file: basename(file), rows: rows.length, skipped, duplicates, firstMonth: months[0] ?? '', lastMonth: months.at(-1) ?? '' };
+}
+
+// ---------- Curated constraints ----------
+
+/** Replaces all curated constraints with the reviewed file. */
+export async function importConstraints(db: Db, file: string, log: Log = console.log) {
+  const { readFile } = await import('node:fs/promises');
+  const rows = validateConstraints(JSON.parse(await readFile(file, 'utf8')));
+  const fetchId = await startFetch(db, 'curated-constraints', basename(file), [], rows.length);
+  try {
+    await db.delete(airportConstraints);
+    if (rows.length) await db.insert(airportConstraints).values(rows);
+    await finishFetch(db, fetchId, 'ok');
+  } catch (err) {
+    await finishFetch(db, fetchId, 'error', err instanceof Error ? err.message : String(err));
+    throw err;
+  }
+  log(`Constraints: ${rows.length} entries for ${new Set(rows.map((r) => r.airport)).size} airports`);
+  return { file: basename(file), entries: rows.length };
 }
 
 // ---------- OurAirports ----------

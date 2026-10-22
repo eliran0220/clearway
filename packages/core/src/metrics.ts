@@ -187,7 +187,8 @@ export interface LongHaulResult {
   warnings: string[];
 }
 
-const isPassengerService = (s: SegmentRow) => s.serviceClass === 'F' && (s.seats ?? 0) > 0;
+/** Scheduled passenger service: T-100 class F with seats. Cargo (G, P) and charters (L) are excluded. */
+export const isPassengerService = (s: Pick<SegmentRow, 'serviceClass' | 'seats'>) => s.serviceClass === 'F' && (s.seats ?? 0) > 0;
 
 /** Flight-weighted: counts departures performed, not routes or destinations. Rule: distance >= threshold. */
 export function longHaulShare(

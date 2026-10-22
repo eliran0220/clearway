@@ -112,6 +112,32 @@ export function mapDelay(r: CsvRecord): DelayRow | null {
   };
 }
 
+// ---------- Curated constraints ----------
+
+export interface ConstraintInput {
+  airport: string;
+  kind: string;
+  summary: string;
+  sourceUrl: string;
+  asOf: string; // YYYY-MM-DD
+}
+
+/** Validates the curated constraints file; every fact needs a source URL and an as-of date. */
+export function validateConstraints(raw: unknown): ConstraintInput[] {
+  if (!Array.isArray(raw)) throw new Error('constraints.json must be an array');
+  return raw.map((c, i) => {
+    const x = c as Partial<ConstraintInput>;
+    const ok =
+      typeof x.airport === 'string' && /^[A-Z0-9]{3}$/.test(x.airport) &&
+      typeof x.kind === 'string' && x.kind.length > 0 &&
+      typeof x.summary === 'string' && x.summary.length > 0 &&
+      typeof x.sourceUrl === 'string' && /^https:\/\//.test(x.sourceUrl) &&
+      typeof x.asOf === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(x.asOf);
+    if (!ok) throw new Error(`constraints.json entry ${i} needs airport (IATA), kind, summary, an https sourceUrl and asOf (YYYY-MM-DD)`);
+    return x as ConstraintInput;
+  });
+}
+
 // ---------- OurAirports ----------
 
 export const AIRPORTS_REQUIRED = ['type', 'name', 'iso_region', 'iata_code', 'scheduled_service'] as const;

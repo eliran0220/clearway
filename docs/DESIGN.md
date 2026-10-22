@@ -38,7 +38,27 @@ Thresholds and weights are illustrative and uncalibrated. Open calibration point
 
 ## 5. Where AI is used
 
-To be completed with the agent: tool list, system prompt rules, the provenance check (every number in an answer must appear in a tool result), and the step limit.
+Claude (Sonnet, through the Vercel AI SDK) does three things: understands the question, chooses and parameterizes tools, and explains the results. It does not compute, estimate or recall numbers. Everything numeric comes from the tools.
+
+| Tool | Answers | Data |
+| --- | --- | --- |
+| `resolveAirports` | Names, cities, codes, regions to IATA codes, with assumptions ("LA" means LAX) | OurAirports |
+| `getAirportMetrics` | Passengers, seats, growth, supply gap, load factor, monthly load factor | BTS API |
+| `rankExpansionCandidates` | Screening score per airport, every component, airports not ranked and why; weight scenarios | BTS API, Delay Causes |
+| `compareCongestion` | Delay, cancellation and NAS share, causes, volume, constraints, which airport is higher per metric | Delay Causes, BTS API, constraints |
+| `getLongHaulShare` | Share of departures at or over a threshold, both scopes, distance bands, top destinations | T-100 Segment |
+| `assessDemandPressure` | Four signals, pressure level, constraints, what the data cannot show | BTS API, Delay Causes, constraints |
+| `getLiveConditions` | FAA delay programs and closures, latest METAR | FAA, NOAA (live, cached 5 and 10 minutes) |
+
+Every tool returns the same evidence envelope (period, sources with retrieval time and kind, assumptions, confidence, warnings, methodology version). Percentages come back rounded to one decimal so the model quotes them exactly.
+
+**Loop and guardrails.** Up to 6 model steps per question. Tool inputs are validated (Zod schemas, IATA codes checked, no free text into SQL). The model has no free SQL, no URL fetching and no file access. Tool output is treated as data, never instructions. The public endpoint has a per-instance rate limit (20 requests per 10 minutes per IP), a 2,000-character question cap and a 40-message conversation cap; the hard cost cap is the Anthropic workspace spend limit.
+
+**Follow-ups.** The web client sends the conversation, including earlier tool calls, so "now use 5,000 km" or "less weight on delays" re-runs the tool with one changed argument. Weight changes are partial overrides; the remaining weight is spread over the other components in their default proportions, and the result is labeled as a scenario.
+
+**Why not RAG or LangChain.** Every answer is a calculation over tables, not a search over documents, so retrieval adds nothing. A single tool-calling loop is easier to test, explain and bound than a framework.
+
+**Still to add:** an evaluation run of the four sample questions and follow-ups that fails if any number in an answer does not appear in a tool result.
 
 ## 6. Tradeoffs and decisions
 

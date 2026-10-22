@@ -4,6 +4,7 @@ import {
   demandPressure,
   normalize,
   rankCandidates,
+  scenarioWeights,
   scoreCandidate,
   withWeights,
   type Candidate,
@@ -95,6 +96,28 @@ describe('expansion screening score', () => {
     expect(SCREENING_V1.components.delay.weight).toBe(0.2); // default untouched
 
     expect(() => withWeights(SCREENING_V1, { growth: 0.5 }, 'bad')).toThrow(/sum to 1/);
+  });
+});
+
+describe('weight scenarios from partial overrides', () => {
+  it('keeps the override and spreads the rest in default proportions', () => {
+    // Default: growth 0.35, loadFactor 0.30, delay 0.20, supplyGap 0.15. Delay -> 0.10 leaves 0.90 for the other three (default sum 0.80).
+    const s = scenarioWeights(SCREENING_V1, { delay: 0.1 }, 'less weight on delays');
+    expect(s.components.delay.weight).toBe(0.1);
+    expect(s.components.growth.weight).toBeCloseTo((0.9 * 0.35) / 0.8, 12);
+    expect(s.components.loadFactor.weight).toBeCloseTo((0.9 * 0.3) / 0.8, 12);
+    const sum = Object.values(s.components).reduce((t, c) => t + c.weight, 0);
+    expect(sum).toBeCloseTo(1, 12);
+    expect(s.scenario).toBe('less weight on delays');
+  });
+
+  it('rejects overrides above 1 in total or out of range', () => {
+    expect(() => scenarioWeights(SCREENING_V1, { delay: 0.7, growth: 0.5 }, 'bad')).toThrow(/more than 1/);
+    expect(() => scenarioWeights(SCREENING_V1, { delay: -0.1 }, 'bad')).toThrow(/between 0 and 1/);
+  });
+
+  it('is deterministic', () => {
+    expect(scenarioWeights(SCREENING_V1, { growth: 0.5 }, 'x')).toEqual(scenarioWeights(SCREENING_V1, { growth: 0.5 }, 'x'));
   });
 });
 

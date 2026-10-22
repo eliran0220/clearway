@@ -12,8 +12,9 @@ Built for the Deloitte Digital Forward Deployed Engineer exercise "Airport Inves
 | Database schema (`packages/db`) | Done, migrations to generate |
 | BTS monthly API adapter and daily refresh job (`apps/api`) | Done, tests on real API rows |
 | T-100 Segment, Delay Causes and OurAirports importers | Done, checked on the full real exports |
-| Agent tools and chat route | Next |
-| Web app (`apps/web`) | Later |
+| Agent: 7 tools, system prompt, streaming `/chat` route, terminal client | Done, to be tried against the real data |
+| Curated constraints (SNA passenger cap, SFO arrival limits) | Done, `data/constraints.json` |
+| Web app (`apps/web`) | Next |
 
 ## Layout
 
@@ -56,6 +57,21 @@ npm run data:import -- delays data/raw/delays/Airline_Delay_Cause.csv
 ```
 
 Re-running an import is safe: T-100 replaces the months in the files, delays and airports are upserted. Every import is recorded in `source_fetches`.
+
+Curated constraints (each with a source URL and an as-of date) live in `data/constraints.json`:
+
+```bash
+npm run data:import -- constraints
+```
+
+### Talking to the agent from the terminal
+
+```bash
+npm run ask -- "Which airports in New England are strong candidates for terminal expansion?"
+npm run ask                    # interactive, with follow-ups; type "exit" to quit
+```
+
+It prints each tool call with its inputs, then the answer.
 
 ## Data sources
 

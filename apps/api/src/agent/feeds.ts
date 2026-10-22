@@ -1,0 +1,87 @@
+// Pure parsers for the live feeds (no I/O): FAA NAS airport status (XML) and NOAA METAR (JSON).
+
+export interface FaaEvent {
+  airport: string;
+  category: string; // the feed's Delay_type name, e.g. 'Ground Delay Programs'
+  reason: string | null;
+  avgDelay: string | null;
+  maxDelay: string | null;
+  minDelay: string | null;
+  trend: string | null;
+  direction: string | null; // Arrival or Departure, for general delays
+  endTime: string | null;
+  start: string | null;
+  reopen: string | null;
+}
+
+export interface FaaStatus {
+  updateTime: string | null;
+  events: FaaEvent[];
+}
+
+const decode = (s: string) =>
+  s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&').trim();
+
+const tag = (xml: string, name: string): string | null => {
+  const m = new RegExp(`<${name}(?:\\s[^>]*)?>([\\s\\S]*?)</${name}>`).exec(xml);
+  return m ? decode(m[1] as string) : null;
+};
+
+/**
+ * Parses the FAA feed with plain string matching on its known elements. No XML library and
+ * no DTD or entity expansion, so a hostile feed cannot pull in external entities.
+ */
+export function parseFaaStatus(xml: string): FaaStatus {
+  const events: FaaEvent[] = [];
+  for (const block of xml.match(/<Delay_type>[\s\S]*?<\/Delay_type>/g) ?? []) {
+    const category = tag(block, 'Name') ?? 'Unknown';
+    for (const m of block.matchAll(/<(Program|Ground_Delay|Delay|Airport)>([\s\S]*?)<\/\1>/g)) {
+      const item = m[2] as string;
+      const airport = tag(item, 'ARPT');
+      if (!airport) continue;
+      const dirMatch = /<Arrival_Departure\s+Type="([^"]+)"/.exec(item);
+      events.push({
+        airport: airport.toUpperCase(),
+        category,
+        reason: tag(item, 'Reason'),
+        avgDelay: tag(item, 'Avg'),
+        maxDelay: tag(item, 'Max'),
+        minDelay: tag(item, 'Min'),
+        trend: tag(item, 'Trend'),
+        direction: dirMatch ? (dirMatch[1] as string) : null,
+        endTime: tag(item, 'End_Time'),
+        start: tag(item, 'Start'),
+        reopen: tag(item, 'Reopen'),
+      });
+    }
+  }
+  return { updateTime: tag(xml, 'Update_Time'), events };
+}
+
+export interface Metar {
+  icao: string;
+  observedAt: string | null;
+  flightCategory: string | null; // VFR, MVFR, IFR, LIFR
+  windDirDeg: number | null;
+  windKt: number | null;
+  visibility: string | null;
+  cloudCover: string | null;
+  raw: string | null;
+}
+
+export function mapMetar(r: Record<string, unknown>): Metar | null {
+  const icao = typeof r.icaoId === 'string' ? r.icaoId : null;
+  if (!icao) return null;
+  const n = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
+  const s = (v: unknown) => (typeof v === 'string' ? v : typeof v === 'number' ? String(v) : null);
+  return {
+    icao,
+    observedAt: s(r.reportTime),
+    flightCategory: s(r.fltCat),
+    windDirDeg: n(r.wdir),
+    windKt: n(r.wspd),
+    visibility: s(r.visib),
+    cloudCover: s(r.cover),
+    raw: s(r.rawOb),
+  };
+}

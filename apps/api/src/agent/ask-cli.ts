@@ -1,4 +1,4 @@
-// Talk to the agent from the terminal, with follow-ups, before the web app exists.
+// Talk to the agent from the terminal, with follow-ups: prints each tool call, the answer and token use.
 //   npm run ask                                  (interactive; type "exit" to quit)
 //   npm run ask -- "Compare LA and Santa Ana congestion"
 import readline from 'node:readline/promises';

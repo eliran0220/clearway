@@ -2,7 +2,7 @@
 
 An AI agent that helps analysts screen US airports for terminal investment. Claude chooses which analysis to run; plain TypeScript and SQL compute every number; each answer shows its period, sources, assumptions and confidence.
 
-Built for the Deloitte Digital Forward Deployed Engineer exercise "Airport Investment Intelligence Agent". Design and tradeoffs: [docs/DESIGN.md](docs/DESIGN.md).
+Built for the Deloitte Digital Forward Deployed Engineer exercise "Airport Investment Intelligence Agent". In brief: [docs/SUMMARY.md](docs/SUMMARY.md). Design and tradeoffs: [docs/DESIGN.md](docs/DESIGN.md).
 
 ## Status
 

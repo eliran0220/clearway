@@ -73,6 +73,16 @@ npm run ask                    # interactive, with follow-ups; type "exit" to qu
 
 It prints each tool call with its inputs, then the answer.
 
+### Evaluation
+
+```bash
+npm run eval                   # all scenarios: the 4 exam questions, follow-ups, an out-of-scope question
+npm run eval -- anchorage      # one scenario
+npm run eval -- --verbose      # print every answer
+```
+
+A turn fails if the expected tool or argument is missing, or if the answer contains a number that no tool returned.
+
 ## Data sources
 
 | Source | Access | Used for |

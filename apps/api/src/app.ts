@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { convertToModelMessages, createUIMessageStreamResponse, streamText, toUIMessageStream, type UIMessage } from 'ai';
 import { METHODOLOGY_VERSION } from '@clearway/core';
-import { SYSTEM_PROMPT, model, stopAfterMaxSteps, tools } from './agent/agent';
+import { model, stopAfterMaxSteps, systemPrompt, tools, uiWithoutReasoning } from './agent/agent';
 import { allowRequest } from './rate-limit';
 
 // CORS is handled here only. The Lambda Function URL has CORS turned off (sst.config.ts),
@@ -62,8 +62,9 @@ app.post('/chat', async (c) => {
 
   const result = streamText({
     model: model(),
-    system: SYSTEM_PROMPT,
-    messages: await convertToModelMessages(messages),
+    system: systemPrompt(),
+    // Earlier turns' thinking is signed for its own request and is rejected if replayed.
+    messages: await convertToModelMessages(uiWithoutReasoning(messages)),
     tools,
     stopWhen: stopAfterMaxSteps,
   });

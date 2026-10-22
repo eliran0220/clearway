@@ -58,7 +58,9 @@ Every tool returns the same evidence envelope (period, sources with retrieval ti
 
 **Why not RAG or LangChain.** Every answer is a calculation over tables, not a search over documents, so retrieval adds nothing. A single tool-calling loop is easier to test, explain and bound than a framework.
 
-**Still to add:** an evaluation run of the four sample questions and follow-ups that fails if any number in an answer does not appear in a tool result.
+**Evaluation.** `npm run eval` runs the four sample questions, their follow-ups ("less weight on delays", "now use 5,000 km", "only passenger flights") and an out-of-scope question (ROI) against the real data and model. A turn fails if the expected tool or argument is missing, or if the answer states a number that appears in no tool result or question (small counts, years and the score scale excepted).
+
+**Conversation hygiene.** Earlier turns' reasoning (thinking) blocks are dropped before a conversation is sent again: each is signed for the request that produced it and is rejected if replayed. Tool calls and results are kept. The system prompt carries today's date so the model can judge whether a live notice is current.
 
 ## 6. Tradeoffs and decisions
 

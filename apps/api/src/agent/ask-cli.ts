@@ -3,21 +3,22 @@
 //   npm run ask -- "Compare LA and Santa Ana congestion"
 import readline from 'node:readline/promises';
 import { generateText, type ModelMessage } from 'ai';
-import { SYSTEM_PROMPT, model, stopAfterMaxSteps, tools } from './agent';
+import { model, stopAfterMaxSteps, systemPrompt, tools, withoutReasoning } from './agent';
 
-const history: ModelMessage[] = [];
+let history: ModelMessage[] = [];
 
 async function ask(question: string) {
-  history.push({ role: 'user', content: question });
+  const turn: ModelMessage[] = [...history, { role: 'user', content: question }];
   const started = Date.now();
-  const result = await generateText({ model: model(), system: SYSTEM_PROMPT, messages: history, tools, stopWhen: stopAfterMaxSteps });
+  const result = await generateText({ model: model(), system: systemPrompt(), messages: turn, tools, stopWhen: stopAfterMaxSteps });
   for (const step of result.steps) {
     for (const call of step.toolCalls) console.log(`  -> ${call.toolName} ${JSON.stringify(call.input)}`);
   }
   console.log(`\n${result.text}\n`);
   const usage = result.usage as { inputTokens?: number; outputTokens?: number } | undefined;
   console.log(`(${((Date.now() - started) / 1000).toFixed(1)} s, ${result.steps.length} steps, ${usage?.inputTokens ?? '?'} in / ${usage?.outputTokens ?? '?'} out tokens)\n`);
-  history.push(...result.response.messages);
+  // Keep the conversation for follow-ups, minus thinking blocks (they cannot be replayed).
+  history = withoutReasoning([...turn, ...result.response.messages]);
 }
 
 const oneShot = process.argv.slice(2).join(' ').trim();
@@ -33,7 +34,6 @@ if (oneShot) {
       await ask(q);
     } catch (err) {
       console.error('Error:', err instanceof Error ? err.message : err);
-      history.pop();
     }
   }
   rl.close();

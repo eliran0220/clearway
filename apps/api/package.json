@@ -1,0 +1,19 @@
+{
+  "name": "@clearway/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Hono API on AWS Lambda: chat agent, live context and the daily refresh job.",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@clearway/core": "*",
+    "@clearway/db": "*",
+    "@hono/aws-lambda": "latest",
+    "@hono/node-server": "latest",
+    "drizzle-orm": "latest",
+    "hono": "latest"
+  }
+}

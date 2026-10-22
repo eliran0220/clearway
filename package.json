@@ -1,0 +1,31 @@
+{
+  "name": "clearway",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Clearway: an AI agent that screens US airports for terminal investment, with deterministic scoring and sourced answers.",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "data:refresh": "tsx --env-file=.env apps/api/src/jobs/refresh-cli.ts",
+    "dev:api": "tsx watch --env-file=.env apps/api/src/dev.ts",
+    "deploy": "sst deploy --stage prod"
+  },
+  "devDependencies": {
+    "@types/node": "latest",
+    "drizzle-kit": "latest",
+    "sst": "latest",
+    "tsx": "latest",
+    "typescript": "latest",
+    "vitest": "latest"
+  }
+}

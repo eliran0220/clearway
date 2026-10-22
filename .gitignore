@@ -1,0 +1,24 @@
+# dependencies and builds
+node_modules/
+dist/
+.next/
+coverage/
+*.tsbuildinfo
+
+# SST
+.sst/
+
+# secrets: only .env.example is committed
+.env
+.env.*
+!.env.example
+
+# raw data exports are large and imported once from a dev machine
+data/raw/
+*.zip
+
+# OS and editors
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+.idea/

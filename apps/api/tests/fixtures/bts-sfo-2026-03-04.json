@@ -1,0 +1,30 @@
+[
+  {
+    "origin_airport_code": "SFO",
+    "reporting_month": "2026-04-01T00:00:00.000",
+    "total_departures": "15753",
+    "total_passengers": "2147010",
+    "total_seats": "2669813",
+    "domestic_departures": "12735",
+    "domestic_passengers": "1563451",
+    "domestic_seats": "1931914",
+    "outbound_international": "3018",
+    "outbound_international_1": "583559",
+    "outbound_international_seats": "737899",
+    "total_freight_lbs": "46516884"
+  },
+  {
+    "origin_airport_code": "SFO",
+    "reporting_month": "2026-03-01T00:00:00.000",
+    "total_departures": "15595",
+    "total_passengers": "2187575",
+    "total_seats": "2589387",
+    "domestic_departures": "12608",
+    "domestic_passengers": "1579470",
+    "domestic_seats": "1865702",
+    "outbound_international": "2987",
+    "outbound_international_1": "608105",
+    "outbound_international_seats": "723685",
+    "total_freight_lbs": "45664194"
+  }
+]

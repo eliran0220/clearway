@@ -266,6 +266,12 @@ export function createTools(getDb: () => Db) {
               })),
             })),
             notRanked: ranking.excluded.map((e) => ({ airport: e.airport, name: nameOf(names, e.airport), status: e.status, reason: e.reason })),
+            counts: {
+              checked: codes.length,
+              ranked: ranking.ranked.length,
+              belowPassengerThreshold: ranking.excluded.filter((e) => e.status === 'ineligible').length,
+              missingData: ranking.excluded.filter((e) => e.status === 'not_scored').length,
+            },
           },
           {
             period: win.period,
@@ -300,10 +306,12 @@ export function createTools(getDb: () => Db) {
           sourcesFor(db, ['delay-causes-file', 'bts-monthly-api']),
         ]);
         const warnings = warning ? [warning] : [];
+        const raw: Record<string, ReturnType<typeof congestion>> = {};
         const data = codes.map((code) => {
           const rows = toCoreDelayRows(delays.filter((r) => r.airport === code));
           if (rows.length === 0) warnings.push(`${code}: no delay data in the window (it may not be served by reporting carriers).`);
           const c = congestion(rows);
+          raw[code] = c;
           const causes = delayCauseShares(rows);
           const deps = traffic.filter((r) => r.airport === code).reduce((s, r) => s + (r.departures ?? 0), 0);
           return {
@@ -328,10 +336,24 @@ export function createTools(getDb: () => Db) {
           data.map((d) => ({ airport: d.airport, values: { delayRatePct: d.delayRatePct, cancelRatePct: d.cancelRatePct, nasSharePct: d.nasSharePct } })),
           ['delayRatePct', 'cancelRatePct', 'nasSharePct'],
         );
+        // For a pair, the gaps in percentage points (first airport minus second), so the model never subtracts.
+        const [a, b] = codes;
+        const gap = (x: number | null | undefined, y: number | null | undefined, digits: number) =>
+          x == null || y == null ? null : Math.round((x - y) * 100 * 10 ** digits) / 10 ** digits;
+        const difference =
+          codes.length === 2 && a && b && raw[a] && raw[b]
+            ? {
+                between: `${a} minus ${b}`,
+                delayRatePts: gap(raw[a].delayRate, raw[b].delayRate, 1),
+                cancelRatePts: gap(raw[a].cancelRate, raw[b].cancelRate, 2),
+                nasSharePts: gap(raw[a].nasShare, raw[b].nasShare, 1),
+              }
+            : null;
         return toolResult(
           {
             airports: data,
             higherOn: higher,
+            difference,
             constraints: constraints.map((c) => ({ airport: c.airport, kind: c.kind, summary: c.summary, sourceUrl: c.sourceUrl, asOf: c.asOf })),
           },
           {

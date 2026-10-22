@@ -35,10 +35,14 @@ const scenarios: Scenario[] = [
       {
         question: 'Put less weight on delays',
         expect: (calls) => {
-          const last = calledWith(calls, 'rankExpansionCandidates').at(-1);
-          if (!last) return ['the ranking was not recomputed'];
-          const w = (last.input.weights ?? {}) as Record<string, unknown>;
-          return typeof w.delay === 'number' && w.delay < 0.2 ? [] : [`expected weights.delay below 0.20, got ${JSON.stringify(last.input.weights)}`];
+          const ranks = calledWith(calls, 'rankExpansionCandidates');
+          if (ranks.length === 0) return ['the ranking was not recomputed'];
+          // The agent may also re-run the default to compare; one call must carry the lower delay weight.
+          const lowered = ranks.some((c) => {
+            const w = (c.input.weights ?? {}) as Record<string, unknown>;
+            return typeof w.delay === 'number' && w.delay < 0.2;
+          });
+          return lowered ? [] : [`expected a call with weights.delay below 0.20, got ${JSON.stringify(ranks.map((c) => c.input.weights ?? null))}`];
         },
       },
     ],

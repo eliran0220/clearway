@@ -110,12 +110,12 @@ export function Chat() {
           </div>
           <div className="ml-auto flex items-center gap-2">
             {dataThrough && <span className="hidden text-xs text-muted sm:inline">Traffic data through {monthLabel(dataThrough)}</span>}
-            <button type="button" onClick={() => setMethodologyOpen(true)} className="flex items-center gap-1.5 rounded-lg border border-line px-2.5 py-1.5 text-sm font-medium hover:bg-tint">
+            <button type="button" onClick={() => setMethodologyOpen(true)} aria-label="Methodology" className="flex items-center gap-1.5 rounded-lg border border-line px-2.5 py-1.5 text-sm font-medium hover:bg-tint">
               <BookOpen aria-hidden className="size-4" />
               <span className="hidden sm:inline">Methodology</span>
             </button>
             {!empty && (
-              <button type="button" onClick={newChat} className="flex items-center gap-1.5 rounded-lg border border-line px-2.5 py-1.5 text-sm font-medium hover:bg-tint">
+              <button type="button" onClick={newChat} aria-label="New chat" className="flex items-center gap-1.5 rounded-lg border border-line px-2.5 py-1.5 text-sm font-medium hover:bg-tint">
                 <Plus aria-hidden className="size-4" />
                 <span className="hidden sm:inline">New chat</span>
               </button>
@@ -215,7 +215,7 @@ export function Chat() {
               onChange={(e) => setDraft(e.target.value)}
               onKeyDown={onKeyDown}
               maxLength={2000}
-              placeholder={voice.listening ? 'Listening...' : 'Ask about an airport, a region or a comparison'}
+              placeholder={voice.listening ? 'Listening...' : 'Ask about an airport or a region'}
               className="max-h-40 min-h-10 flex-1 resize-none bg-transparent py-2 text-[15px] outline-none placeholder:text-muted"
             />
             {voice.supported && (

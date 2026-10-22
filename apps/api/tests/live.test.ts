@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { mapMetar, parseFaaStatus } from '../src/agent/feeds';
+import { inForceAt, mapMetar, notamWindow, parseFaaStatus } from '../src/agent/feeds';
 import { allowRequest } from '../src/rate-limit';
 import { validateConstraints } from '../src/data/imports/mappers';
 import { readFileSync } from 'node:fs';
@@ -9,7 +9,7 @@ const FAA_XML = `<AIRPORT_STATUS_INFORMATION><Update_Time>Thu Oct 22 17:19:21 20
 <Delay_type><Name>Ground Stop Programs</Name><Ground_Stop_List><Program><ARPT>LGA</ARPT><Reason>airport volume</Reason><End_Time>2:15 pm EDT</End_Time></Program></Ground_Stop_List></Delay_type>
 <Delay_type><Name>Ground Delay Programs</Name><Ground_Delay_List><Ground_Delay><ARPT>AUS</ARPT><Reason>runway construction</Reason><Avg>35 minutes</Avg><Max>2 hours and 2 minutes</Max></Ground_Delay><Ground_Delay><ARPT>SFO</ARPT><Reason>low ceilings</Reason><Avg>1 hour and 5 minutes</Avg><Max>2 hours</Max></Ground_Delay></Ground_Delay_List></Delay_type>
 <Delay_type><Name>General Arrival/Departure Delay Info</Name><Arrival_Departure_Delay_List><Delay><ARPT>EWR</ARPT><Reason>VOL:Volume</Reason><Arrival_Departure Type="Departure"><Min>16 minutes</Min><Max>30 minutes</Max><Trend>Increasing</Trend></Arrival_Departure></Delay></Arrival_Departure_Delay_List></Delay_type>
-<Delay_type><Name>Airport Closures</Name><Airport_Closure_List><Airport><ARPT>LAX</ARPT><Reason>!LAX 10/123 LAX AD AP CLSD TO NON SKED TRANSIENT GA ACFT &amp; more</Reason><Start>Oct 01 at 06:00 UTC.</Start><Reopen>Dec 31 at 07:59 UTC.</Reopen></Airport></Airport_Closure_List></Delay_type>
+<Delay_type><Name>Airport Closures</Name><Airport_Closure_List><Airport><ARPT>LAX</ARPT><Reason>!LAX 05/277 LAX AD AP CLSD TO NON SKED TRANSIENT GA ACFT &amp; more 2605271826-2705281600</Reason><Start>Oct 01 at 06:00 UTC.</Start><Reopen>Dec 31 at 07:59 UTC.</Reopen></Airport></Airport_Closure_List></Delay_type>
 </AIRPORT_STATUS_INFORMATION>`;
 
 describe('FAA NAS status parser', () => {
@@ -36,6 +36,26 @@ describe('FAA NAS status parser', () => {
     const lax = status.events.find((e) => e.airport === 'LAX');
     expect(lax?.reopen).toBe('Dec 31 at 07:59 UTC.');
     expect(lax?.reason).toContain('& more');
+  });
+
+  it('reads a closure NOTAM validity window, because Start and Reopen carry no year', () => {
+    const lax = status.events.find((e) => e.airport === 'LAX');
+    expect(lax?.notamText).toBe('!LAX 05/277 LAX AD AP CLSD TO NON SKED TRANSIENT GA ACFT & more');
+    expect(lax?.validFrom).toBe('2026-05-27T18:26:00Z');
+    expect(lax?.validTo).toBe('2027-05-28T16:00:00Z');
+    expect(inForceAt(lax!, new Date('2026-10-22T19:00:00Z'))).toBe(true);
+    expect(inForceAt(lax!, new Date('2027-06-01T00:00:00Z'))).toBe(false);
+    expect(inForceAt(lax!, new Date('2026-05-01T00:00:00Z'))).toBe(false);
+    const sfo = status.events.find((e) => e.airport === 'SFO');
+    expect(sfo?.notamText).toBeNull();
+    expect(inForceAt(sfo!, new Date())).toBeNull();
+  });
+
+  it('handles permanent and estimated NOTAM ends, and text without a window', () => {
+    expect(notamWindow('!BOS 01/001 BOS RWY 4L CLSD 2601010000-PERM')).toEqual({ notamText: '!BOS 01/001 BOS RWY 4L CLSD', validFrom: '2026-01-01T00:00:00Z', validTo: null, permanent: true });
+    expect(notamWindow('!BOS 01/002 BOS TWY A CLSD 2601010000-2603312359EST').validTo).toBe('2026-03-31T23:59:00Z');
+    expect(notamWindow('!BOS 01/003 BOS TWY B CLSD')).toEqual({ notamText: '!BOS 01/003 BOS TWY B CLSD', validFrom: null, validTo: null, permanent: false });
+    expect(inForceAt({ validFrom: '2026-01-01T00:00:00Z', validTo: null, permanent: true }, new Date('2030-01-01T00:00:00Z'))).toBe(true);
   });
 
   it('returns no events for an empty or unexpected feed', () => {

@@ -37,7 +37,7 @@ function doneLabel(name: string, part: ToolPart): string {
       return counts ? `Scored ${counts.ranked} of ${counts.checked} airports` : 'Scored airports';
     }
     case 'getLongHaulShare':
-      return `Counted ${String(input.airport ?? '')} departures at ${Number(input.thresholdKm ?? 4000).toLocaleString('en-US')} km`;
+      return `Counted ${String(input.airport ?? '')} ${input.scope === 'passenger' ? 'passenger ' : ''}departures at ${Number(input.thresholdKm ?? 4000).toLocaleString('en-US')} km`;
     case 'compareCongestion':
       return `Compared ${((input.airports as string[] | undefined) ?? []).join(' and ')}`;
     case 'assessDemandPressure':
@@ -98,6 +98,12 @@ function ResultCard({ part, onAsk, busy }: { part: ToolPart; onAsk: (text: strin
   }
 }
 
+/** The answer's first paragraph (the direct answer) and the rest, so the cards can sit between them. */
+function splitLead(text: string): [string, string] {
+  const m = /\n\s*\n/.exec(text);
+  return m ? [text.slice(0, m.index), text.slice(m.index + m[0].length)] : [text, ''];
+}
+
 export const textOf = (m: UIMessage) =>
   m.parts
     .map((p) => (p.type === 'text' ? (p as { text: string }).text : ''))
@@ -115,6 +121,7 @@ export function Message({ message, streaming, busy, onAsk, onSpeak }: { message:
 
   const toolParts = message.parts.filter((p) => isToolPart(p as { type: string })) as unknown as ToolPart[];
   const text = textOf(message);
+  const [lead, rest] = splitLead(text);
   const thinking = streaming && !text && toolParts.every((p) => p.state === 'output-available');
 
   return (
@@ -129,10 +136,10 @@ export function Message({ message, streaming, busy, onAsk, onSpeak }: { message:
             <span className="thinking-dot [animation-delay:0.4s]">.</span>
           </p>
         )}
-        {text && (
+        {lead && (
           <div className="flex items-start gap-3">
             <div className="min-w-0 flex-1">
-              <AnswerText text={text} />
+              <AnswerText text={lead} />
             </div>
             {!streaming && (
               <button
@@ -147,9 +154,15 @@ export function Message({ message, streaming, busy, onAsk, onSpeak }: { message:
           </div>
         )}
       </div>
+      {/* Direct answer first, then the result cards, then the explanation. */}
       {toolParts.map((p) => (
         <ResultCard key={p.toolCallId} part={p} onAsk={onAsk} busy={busy} />
       ))}
+      {rest && (
+        <div className="pr-0 sm:pr-11">
+          <AnswerText text={rest} />
+        </div>
+      )}
     </article>
   );
 }

@@ -10,8 +10,12 @@ export interface FaaEvent {
   trend: string | null;
   direction: string | null; // Arrival or Departure, for general delays
   endTime: string | null;
-  start: string | null;
+  start: string | null; // as the feed gives it, without a year ("May 27 at 18:26 UTC.")
   reopen: string | null;
+  notamText: string | null; // the NOTAM text without its validity window, for closures
+  validFrom: string | null; // ISO, from the NOTAM's own validity window
+  validTo: string | null; // ISO; null with permanent = true for PERM
+  permanent: boolean;
 }
 
 export interface FaaStatus {
@@ -27,6 +31,37 @@ const tag = (xml: string, name: string): string | null => {
   return m ? decode(m[1] as string) : null;
 };
 
+const notamDate = (d: string): string | null => {
+  const iso = `20${d.slice(0, 2)}-${d.slice(2, 4)}-${d.slice(4, 6)}T${d.slice(6, 8)}:${d.slice(8, 10)}:00Z`;
+  return Number.isNaN(Date.parse(iso)) ? null : iso;
+};
+
+/**
+ * Reads the validity window a NOTAM ends with: YYMMDDHHMM-YYMMDDHHMM in UTC, the end optionally
+ * PERM or followed by EST. The feed's own Start and Reopen fields carry no year, so this is the
+ * only reliable way to tell whether a closure is in force.
+ */
+export function notamWindow(text: string | null): { notamText: string | null; validFrom: string | null; validTo: string | null; permanent: boolean } {
+  if (!text) return { notamText: null, validFrom: null, validTo: null, permanent: false };
+  const m = /\s(\d{10})-(\d{10}|PERM)(?:EST)?\s*$/.exec(text);
+  if (!m) return { notamText: text, validFrom: null, validTo: null, permanent: false };
+  const permanent = m[2] === 'PERM';
+  return {
+    notamText: text.slice(0, m.index).trim(),
+    validFrom: notamDate(m[1] as string),
+    validTo: permanent ? null : notamDate(m[2] as string),
+    permanent,
+  };
+}
+
+/** true or false when the event has a validity window, null when the feed gives none. */
+export function inForceAt(e: Pick<FaaEvent, 'validFrom' | 'validTo' | 'permanent'>, now: Date): boolean | null {
+  if (!e.validFrom) return null;
+  const t = now.getTime();
+  if (t < Date.parse(e.validFrom)) return false;
+  return e.permanent || (e.validTo != null && t <= Date.parse(e.validTo));
+}
+
 /**
  * Parses the FAA feed with plain string matching on its known elements. No XML library and
  * no DTD or entity expansion, so a hostile feed cannot pull in external entities.
@@ -40,10 +75,12 @@ export function parseFaaStatus(xml: string): FaaStatus {
       const airport = tag(item, 'ARPT');
       if (!airport) continue;
       const dirMatch = /<Arrival_Departure\s+Type="([^"]+)"/.exec(item);
+      const reason = tag(item, 'Reason');
+      const isNotam = reason?.startsWith('!') ?? false;
       events.push({
         airport: airport.toUpperCase(),
         category,
-        reason: tag(item, 'Reason'),
+        reason,
         avgDelay: tag(item, 'Avg'),
         maxDelay: tag(item, 'Max'),
         minDelay: tag(item, 'Min'),
@@ -52,6 +89,7 @@ export function parseFaaStatus(xml: string): FaaStatus {
         endTime: tag(item, 'End_Time'),
         start: tag(item, 'Start'),
         reopen: tag(item, 'Reopen'),
+        ...(isNotam ? notamWindow(reason) : { notamText: null, validFrom: null, validTo: null, permanent: false }),
       });
     }
   }

@@ -25,6 +25,22 @@ export function compact(n: number | null | undefined): string {
 }
 
 export const pct = (n: number | null | undefined) => (n == null ? 'n/a' : `${n}%`);
+/** Formats a column of percentages with the same number of decimals, so 18 sits as 18.0% beside 19.3%. */
+export function alignedPcts(values: (number | null | undefined)[]): string[] {
+  const decimals = (n: number) => (String(n).split('.')[1] ?? '').length;
+  const digits = Math.min(2, Math.max(0, ...values.filter((v): v is number => v != null).map(decimals)));
+  return values.map((v) => (v == null ? 'n/a' : `${v.toFixed(digits)}%`));
+}
+
+/** '2027-05-28T16:00:00Z' -> '28 May 2027' */
+export function dayLabel(iso: string | null | undefined): string {
+  if (!iso) return '';
+  const t = Date.parse(iso);
+  if (Number.isNaN(t)) return iso;
+  const d = new Date(t);
+  return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+}
+
 export const signedPct = (n: number | null | undefined) => (n == null ? 'n/a' : `${n > 0 ? '+' : ''}${n}%`);
 export const pts = (n: number | null | undefined) => (n == null ? 'n/a' : `${n > 0 ? '+' : ''}${n} pts`);
 

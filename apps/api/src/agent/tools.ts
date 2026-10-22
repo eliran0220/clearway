@@ -32,7 +32,7 @@ import {
   toCoreDelayRows,
   windowsEndingAt,
 } from './analysis';
-import type { FaaStatus, Metar } from './feeds';
+import { inForceAt, type FaaStatus, type Metar } from './feeds';
 import { cachedFetch, fetchFaaStatus, fetchMetars } from './live';
 
 const pct = (x: number | null | undefined) => (x == null ? null : Math.round(x * 1000) / 10);
@@ -265,7 +265,13 @@ export function createTools(getDb: () => Db) {
                 points: Math.round(c.points * 10) / 10,
               })),
             })),
-            notRanked: ranking.excluded.map((e) => ({ airport: e.airport, name: nameOf(names, e.airport), status: e.status, reason: e.reason })),
+            notRanked: ranking.excluded.map((e) => ({
+              airport: e.airport,
+              name: nameOf(names, e.airport),
+              status: e.status,
+              reason: e.reason,
+              passengers12m: candidates.find((c) => c.airport === e.airport)?.passengersW1 ?? null,
+            })),
             counts: {
               checked: codes.length,
               ranked: ranking.ranked.length,
@@ -282,8 +288,8 @@ export function createTools(getDb: () => Db) {
               'A screening score, not an ROI or a feasibility verdict: a high score means worth a terminal-capacity study.',
               'Fixed ranges and weights are illustrative and uncalibrated (see the methodology).',
               'Delay pressure uses arrivals delayed 15+ minutes by reporting carriers (domestic flights).',
-              'The score ignores airport size; passengers12m shows it. Raise minPassengers to focus on larger airports.',
-              'Load factor measures how full the planes are, not terminal use.',
+              'The score ignores airport size, so each airport also shows its passengers over the 12 months; a higher passenger threshold focuses on larger airports.',
+              'Seat occupancy (load factor) measures how full the planes are, not terminal use.',
             ],
           },
         );
@@ -506,7 +512,7 @@ export function createTools(getDb: () => Db) {
 
     getLiveConditions: tool({
       description:
-        'Current conditions for 1 to 6 airports: FAA ground stops, ground delay programs, delays and closures, plus the latest weather observation (METAR). Use as context next to historical analysis; current conditions never explain a 12-month trend.',
+        'Current conditions for 1 to 6 airports: FAA ground stops, ground delay programs, delays and closures, plus the latest weather observation (METAR). For closures, validFrom and validTo are the NOTAM validity window and inForceNow says whether it applies now; the start and reopen fields have no year, so never date a closure from them. Use as context next to historical analysis; current conditions never explain a 12-month trend.',
       inputSchema: z.object({ airports: z.array(z.string()).min(1).max(6) }),
       execute: async ({ airports }) => {
         const db = getDb();
@@ -530,7 +536,8 @@ export function createTools(getDb: () => Db) {
         }
         const data = codes.map((code) => {
           const icao = rows.find((r) => r.iata === code)?.icao ?? null;
-          const events = faa ? faa.value.events.filter((e) => e.airport === code) : null;
+          const now = new Date();
+          const events = faa ? faa.value.events.filter((e) => e.airport === code).map((e) => ({ ...e, inForceNow: inForceAt(e, now) })) : null;
           return {
             airport: code,
             name: nameOf(rows, code),
@@ -552,6 +559,7 @@ export function createTools(getDb: () => Db) {
             assumptions: [
               'Not appearing in the FAA feed does not prove there are no delays.',
               'An FAA event can apply to one kind of operation only; do not describe it as a full airport closure unless it says so.',
+              "Closure dates come from the NOTAM's own validity window (UTC), because the feed's start and reopen times give no year.",
               'Current conditions are context; they do not explain a 12-month trend.',
             ],
           },

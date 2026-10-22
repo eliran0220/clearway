@@ -189,7 +189,7 @@ export function demandPressure(input: PressureInput): { signals: Signal[]; metCo
       id: 'demand_outpacing_supply',
       label: 'Demand outpacing seats',
       met: input.supplyGap == null ? null : input.supplyGap > 0,
-      evidence: input.supplyGap == null ? 'growth unavailable' : `passenger growth minus seat growth = ${round(input.supplyGap * 100)} pp`,
+      evidence: input.supplyGap == null ? 'growth unavailable' : `passenger growth minus seat growth = ${round(input.supplyGap * 100)} pts`,
     },
     {
       id: 'operations_strained',
@@ -207,7 +207,7 @@ export function demandPressure(input: PressureInput): { signals: Signal[]; metCo
       id: 'documented_constraint',
       label: 'Documented capacity constraint',
       met: input.documentedConstraints > 0,
-      evidence: `${input.documentedConstraints} sourced constraint(s)`,
+      evidence: input.documentedConstraints === 1 ? '1 sourced constraint' : `${input.documentedConstraints} sourced constraints`,
     },
   ];
   const unknown = signals.filter((s) => s.met === null).length;

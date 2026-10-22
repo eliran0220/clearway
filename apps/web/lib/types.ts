@@ -43,7 +43,7 @@ export interface RankingData {
     passengers12m: number | null;
     components: { key: string; label: string; raw: { value: number | null; unit: string }; normalized: number; weightPct: number; points: number }[];
   }[];
-  notRanked: { airport: string; name: string | null; status: string; reason: string }[];
+  notRanked: { airport: string; name: string | null; status: string; reason: string; passengers12m?: number | null }[];
   counts?: { checked: number; ranked: number; belowPassengerThreshold: number; missingData: number };
 }
 
@@ -135,6 +135,11 @@ export interface FaaEvent {
   endTime: string | null;
   start: string | null;
   reopen: string | null;
+  notamText?: string | null;
+  validFrom?: string | null;
+  validTo?: string | null;
+  permanent?: boolean;
+  inForceNow?: boolean | null;
 }
 
 export interface LiveData {

@@ -25,10 +25,15 @@ export function Methodology({ open, onClose }: { open: boolean; onClose: () => v
 
   useEffect(() => {
     if (!open) return;
+    // Focus moves into the drawer, and back to whatever opened it when the drawer closes.
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     closeRef.current?.focus();
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      opener?.focus();
+    };
   }, [open, onClose]);
 
   if (!open) return null;
@@ -51,7 +56,7 @@ export function Methodology({ open, onClose }: { open: boolean; onClose: () => v
         </p>
 
         <h3 className="mb-2 font-semibold">Expansion screening score</h3>
-        <div className="mb-2 flex h-2.5 overflow-hidden rounded-full" aria-hidden>
+        <div className="mb-2 flex h-2.5 gap-[2px] overflow-hidden rounded-full" aria-hidden>
           {COMPONENTS.map((c) => (
             <span key={c.key} className={COMPONENT_COLOR[c.key]} style={{ width: `${c.weight}%` }} />
           ))}

@@ -8,7 +8,7 @@ import { periodLabel, timeAgo } from '@/lib/format';
 const KIND_LABEL: Record<SourceKind, string> = {
   'live-api': 'Live API',
   'cached-api': 'API, refreshed daily',
-  file: 'Official file',
+  file: 'File, imported',
   curated: 'Curated source',
 };
 

@@ -18,6 +18,12 @@
   --cw-watch-bg: #fffaeb;
   --cw-critical: #b42318;
   --cw-critical-bg: #fef3f2;
+  /* Chart categories: separated in lightness as well as hue, checked for contrast on the surface. */
+  --cw-chart-1: #1e2a78;
+  --cw-chart-2: #4f46e5;
+  --cw-chart-3: #0ea5e9;
+  --cw-chart-4: #7dd3fc;
+  --cw-chart-5: #94a3b8;
   color-scheme: light;
 }
 
@@ -39,6 +45,11 @@
     --cw-watch-bg: #2a1f0b;
     --cw-critical: #fda29b;
     --cw-critical-bg: #2d1414;
+    --cw-chart-1: #5b6cf0;
+    --cw-chart-2: #c4b5fd;
+    --cw-chart-3: #22b8f0;
+    --cw-chart-4: #e0f2fe;
+    --cw-chart-5: #64748b;
     color-scheme: dark;
   }
 }
@@ -60,6 +71,11 @@
   --color-watch-bg: var(--cw-watch-bg);
   --color-critical: var(--cw-critical);
   --color-critical-bg: var(--cw-critical-bg);
+  --color-chart-1: var(--cw-chart-1);
+  --color-chart-2: var(--cw-chart-2);
+  --color-chart-3: var(--cw-chart-3);
+  --color-chart-4: var(--cw-chart-4);
+  --color-chart-5: var(--cw-chart-5);
   --font-sans: var(--font-public-sans), system-ui, sans-serif;
 }
 

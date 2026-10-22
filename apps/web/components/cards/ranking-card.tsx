@@ -6,13 +6,15 @@ import type { Envelope, RankingData } from '@/lib/types';
 import { compact } from '@/lib/format';
 import { Card } from '../card';
 
-/** One color per score component, dusk to daylight, so segments differ in lightness as well as hue. */
+/** One chart color per score component; they differ in lightness as well as hue in both themes. */
 export const COMPONENT_COLOR: Record<string, string> = {
-  growth: 'bg-brand-1',
-  loadFactor: 'bg-brand-2',
-  delay: 'bg-brand-3',
-  supplyGap: 'bg-brand-4',
+  growth: 'bg-chart-1',
+  loadFactor: 'bg-chart-2',
+  delay: 'bg-chart-3',
+  supplyGap: 'bg-chart-4',
 };
+
+const score1 = (n: number) => n.toFixed(1);
 
 const rawText = (raw: { value: number | null; unit: string }) =>
   raw.value == null ? 'n/a' : raw.unit === 'pts' ? `${raw.value > 0 ? '+' : ''}${raw.value} pts` : `${raw.value}%`;
@@ -23,6 +25,8 @@ export function RankingCard({ envelope }: { envelope: Envelope<RankingData> }) {
   const [showExcluded, setShowExcluded] = useState(false);
   const firstComponents = d.ranked[0]?.components ?? [];
   const isScenario = d.scenario !== 'default';
+  const belowThreshold = d.notRanked.filter((n) => n.status === 'ineligible');
+  const missingData = d.notRanked.filter((n) => n.status !== 'ineligible');
 
   return (
     <Card
@@ -33,7 +37,7 @@ export function RankingCard({ envelope }: { envelope: Envelope<RankingData> }) {
       <ul className="mb-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted" aria-label="Score components and weights">
         {firstComponents.map((c) => (
           <li key={c.key} className="flex items-center gap-1.5">
-            <span aria-hidden className={`size-2.5 rounded-sm ${COMPONENT_COLOR[c.key] ?? 'bg-muted'}`} />
+            <span aria-hidden className={`size-2.5 rounded-sm ${COMPONENT_COLOR[c.key] ?? 'bg-chart-5'}`} />
             {c.label} {c.weightPct}%
           </li>
         ))}
@@ -48,30 +52,36 @@ export function RankingCard({ envelope }: { envelope: Envelope<RankingData> }) {
                 type="button"
                 onClick={() => setOpen(expanded ? null : r.airport)}
                 aria-expanded={expanded}
-                className={`grid w-full grid-cols-[1.5rem_minmax(0,9rem)_1fr_2.75rem] items-center gap-3 rounded-xl border px-3 py-2.5 text-left sm:grid-cols-[1.5rem_minmax(0,13rem)_1fr_3rem] ${
+                className={`grid w-full grid-cols-[1.5rem_minmax(0,1fr)_3rem] items-center gap-x-3 gap-y-2 rounded-xl border px-3 py-2.5 text-left sm:grid-cols-[1.5rem_minmax(0,13rem)_1fr_3rem] ${
                   expanded ? 'border-brand-2/40 bg-tint' : 'border-transparent hover:bg-tint/60'
                 }`}
               >
                 <span className="text-sm text-muted">{r.rank}</span>
                 <span className="min-w-0">
-                  <span className="block font-semibold">{r.airport}</span>
-                  <span className="block truncate text-xs text-muted">
-                    {r.name ?? ''} {r.passengers12m != null && <>({compact(r.passengers12m)} passengers)</>}
+                  <span className="flex items-baseline gap-2">
+                    <span className="font-semibold">{r.airport}</span>
+                    {r.passengers12m != null && <span className="text-xs text-muted">{compact(r.passengers12m)} passengers</span>}
+                  </span>
+                  <span className="block truncate text-xs text-muted" title={r.name ?? undefined}>
+                    {r.name ?? ''}
                   </span>
                 </span>
-                <span className="flex h-3 overflow-hidden rounded-full bg-line" aria-hidden>
-                  {r.components.map((c) => (
-                    <span key={c.key} className={COMPONENT_COLOR[c.key] ?? 'bg-muted'} style={{ width: `${c.points}%` }} />
-                  ))}
+                {/* On a phone the bar takes its own row under the name; from sm up it sits between name and score. */}
+                <span className="col-span-2 col-start-2 row-start-2 flex h-3 gap-[2px] overflow-hidden rounded-full bg-line sm:col-span-1 sm:col-start-auto sm:row-start-auto" aria-hidden>
+                  {r.components
+                    .filter((c) => c.points > 0)
+                    .map((c) => (
+                      <span key={c.key} className={COMPONENT_COLOR[c.key] ?? 'bg-chart-5'} style={{ width: `${c.points}%` }} />
+                    ))}
                 </span>
-                <span className="text-right text-base font-bold">{r.score}</span>
+                <span className="text-right text-base font-bold tabular-nums">{score1(r.score)}</span>
               </button>
               {expanded && (
-                <div className="mt-1.5 grid gap-2 px-1 pb-1 sm:grid-cols-4">
+                <div className="mt-1.5 grid grid-cols-2 gap-2 px-1 pb-1 sm:grid-cols-4">
                   {r.components.map((c) => (
                     <div key={c.key} className="rounded-lg border border-line px-3 py-2">
                       <div className="flex items-center gap-1.5 text-xs text-muted">
-                        <span aria-hidden className={`size-2 rounded-sm ${COMPONENT_COLOR[c.key] ?? 'bg-muted'}`} />
+                        <span aria-hidden className={`size-2 rounded-sm ${COMPONENT_COLOR[c.key] ?? 'bg-chart-5'}`} />
                         {c.label}
                       </div>
                       <div className="text-lg font-bold">{rawText(c.raw)}</div>
@@ -96,13 +106,32 @@ export function RankingCard({ envelope }: { envelope: Envelope<RankingData> }) {
             <ChevronDown aria-hidden className={`size-4 transition-transform ${showExcluded ? 'rotate-180' : ''}`} />
           </button>
           {showExcluded && (
-            <ul className="mt-2 grid gap-1 sm:grid-cols-2">
-              {d.notRanked.map((n) => (
-                <li key={n.airport} className="text-muted">
-                  <span className="font-semibold text-ink">{n.airport}</span> {n.reason}
-                </li>
-              ))}
-            </ul>
+            <div className="mt-2 space-y-2.5">
+              {belowThreshold.length > 0 && (
+                <div>
+                  <h4 className="mb-1 text-xs text-muted">Below {d.minPassengers.toLocaleString('en-US')} passengers in the 12 months</h4>
+                  <ul className="flex flex-wrap gap-x-3 gap-y-1">
+                    {belowThreshold.map((n) => (
+                      <li key={n.airport} title={n.name ?? undefined}>
+                        <span className="font-semibold">{n.airport}</span> <span className="text-muted">{n.passengers12m != null ? compact(n.passengers12m) : ''}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {missingData.length > 0 && (
+                <div>
+                  <h4 className="mb-1 text-xs text-muted">Not scored: data missing</h4>
+                  <ul className="space-y-0.5">
+                    {missingData.map((n) => (
+                      <li key={n.airport}>
+                        <span className="font-semibold">{n.airport}</span> <span className="text-muted">{n.name ? `${n.name}: ` : ''}{n.reason}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
           )}
         </div>
       )}

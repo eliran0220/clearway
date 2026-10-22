@@ -138,9 +138,10 @@ export function createTools(getDb: () => Db) {
         const { end, warning } = chooseEnd([latest], endMonth);
         if (!end) throw new Error('Traffic data is not loaded yet.');
         const win = windowsEndingAt(end);
-        const [rows, names, sources] = await Promise.all([
+        const [rows, names, national, sources] = await Promise.all([
           repo.trafficRows(db, codes, win.w0[0] as string, end),
           repo.airportsByCodes(db, codes),
+          repo.nationalTraffic(db, win.w1[0] as string, end),
           sourcesFor(db, ['bts-monthly-api']),
         ]);
         const warnings = warning ? [warning] : [];
@@ -162,7 +163,11 @@ export function createTools(getDb: () => Db) {
           };
         });
         return toolResult(
-          { airports: data, window: { recent: win.period, prior: { start: win.w0[0], end: win.w0.at(-1) } } },
+          {
+            airports: data,
+            nationalLoadFactorPct: pct(national.loadFactor),
+            window: { recent: win.period, prior: { start: win.w0[0], end: win.w0.at(-1) } },
+          },
           {
             period: win.period,
             sources,
@@ -416,11 +421,12 @@ export function createTools(getDb: () => Db) {
         const db = getDb();
         const [code] = normalizeCodes([airport]) as [string];
         const { win, warning } = await trafficAndDelayWindow(db, endMonth);
-        const [traffic, delays, names, constraints, sources] = await Promise.all([
+        const [traffic, delays, names, constraints, national, sources] = await Promise.all([
           repo.trafficRows(db, [code], win.w0[0] as string, win.end),
           repo.delayRows(db, [code], win.w1[0] as string, win.end),
           repo.airportsByCodes(db, [code]),
           repo.constraintsFor(db, [code]),
+          repo.nationalTraffic(db, win.w1[0] as string, win.end),
           sourcesFor(db, ['bts-monthly-api', 'delay-causes-file']),
         ]);
         const s = trafficSummary(traffic, win.w1, win.w0);
@@ -432,6 +438,7 @@ export function createTools(getDb: () => Db) {
           delayRate: c?.delayRate ?? null,
           nasShare: c?.nasShare ?? null,
           documentedConstraints: constraints.length,
+          loadFactorBenchmark: national.loadFactor,
         });
         return toolResult(
           {
@@ -443,6 +450,7 @@ export function createTools(getDb: () => Db) {
             metrics: {
               passengers12m: s.passengersW1,
               loadFactorPct: pct(s.loadFactor),
+              nationalLoadFactorPct: pct(national.loadFactor),
               passengerGrowthPct: pct(s.passengerGrowth),
               seatGrowthPct: pct(s.seatGrowth),
               supplyGapPts: pts(s.supplyGap),
@@ -465,7 +473,8 @@ export function createTools(getDb: () => Db) {
             assumptions: [
               'Signals are proxies for demand pressure, not a measurement of unmet demand.',
               'Delay rate counts arrivals 15 or more minutes late (the BTS definition), by reporting carriers.',
-              'Thresholds: load factor 85%, supply gap above 0, delay rate 25% or NAS share above 40%.',
+              `Planes are full = load factor above the national load factor for the same 12 months (${national.airports.toLocaleString('en-US')} US airports in the BTS data).`,
+              'Other thresholds: supply gap above 0; delay rate 25% or more, or NAS share above 40%.',
               'A documented constraint suggests a cause; it is not a measured effect.',
             ],
           },

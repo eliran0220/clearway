@@ -34,7 +34,9 @@ Formulas live in `packages/core` with unit tests. Summary:
 - Long-haul share = departures performed on routes of 4,000 km or more / all departures; threshold and scope (all services or scheduled passenger) are parameters.
 - Expansion screening score: four components on fixed ranges, weights 35/30/20/15 (growth, occupancy, delays, supply gap). Missing component = not scored; no silent re-weighting.
 
-Thresholds and weights are illustrative and uncalibrated. Open calibration point: real SFO monthly load factor is 80 to 85%, so a fixed 85% "planes are full" threshold may be too strict; compare to the national median for the same months instead.
+- Demand pressure (the "unmet demand" question): four signals. Planes are full = load factor above the national load factor for the same 12 months (all US airports in the BTS data); demand outpacing supply = supply gap above 0; operations strained = delay rate 25% or more, or NAS share above 40%; a documented constraint exists. 0-1 signals low, 2 moderate, 3-4 high.
+
+Score weights and ranges are illustrative and uncalibrated; the score ignores airport size, so each ranked airport also reports its 12-month passengers and the user can raise the eligibility threshold. Calibration decision: "planes are full" was first a fixed 85%, but real SFO monthly load factors run 80 to 85%, so it is now measured against the national load factor for the same months instead of a chosen number. The ranking formula was kept as is, so it stays explainable component by component.
 
 ## 5. Where AI is used
 
@@ -73,3 +75,4 @@ Every tool returns the same evidence envelope (period, sources with retrieval ti
 | npm workspaces | No extra tooling on Node 26 | pnpm |
 | Browser voice first | Free and no backend; server transcription only if browser voice falls short | |
 | Fixed score ranges | A score does not change when other airports are added | Min-max within the group |
+| "Planes are full" vs national load factor | A measured benchmark for the same months instead of a fixed 85% | Percentile scoring of every component against all US airports: more statistical, harder to explain |

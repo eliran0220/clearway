@@ -156,6 +156,8 @@ export interface PressureInput {
   delayRate: number | null;
   nasShare: number | null;
   documentedConstraints: number; // count of sourced constraints for the airport
+  /** National load factor for the same months. When given, "planes are full" means above it; otherwise the fixed 85% is used. */
+  loadFactorBenchmark?: number | null;
 }
 
 export interface Signal {
@@ -173,12 +175,15 @@ const pct = (x: number) => `${round(x * 100)}%`;
 
 export function demandPressure(input: PressureInput): { signals: Signal[]; metCount: number; level: PressureLevel } {
   const t = PRESSURE_THRESHOLDS;
+  const benchmark = input.loadFactorBenchmark ?? null;
+  const fullPlanes = (lf: number) => (benchmark != null ? lf > benchmark : lf >= t.loadFactor);
+  const lfComparison = benchmark != null ? `national ${pct(benchmark)} for the same months` : `threshold ${pct(t.loadFactor)}`;
   const signals: Signal[] = [
     {
       id: 'full_planes',
       label: 'Planes are full',
-      met: input.loadFactor == null ? null : input.loadFactor >= t.loadFactor,
-      evidence: input.loadFactor == null ? 'load factor unavailable' : `load factor ${pct(input.loadFactor)} (threshold ${pct(t.loadFactor)})`,
+      met: input.loadFactor == null ? null : fullPlanes(input.loadFactor),
+      evidence: input.loadFactor == null ? 'load factor unavailable' : `load factor ${pct(input.loadFactor)} (${lfComparison})`,
     },
     {
       id: 'demand_outpacing_supply',

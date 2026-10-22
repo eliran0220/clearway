@@ -134,6 +134,17 @@ describe('demand pressure', () => {
     expect(r.level).toBe('moderate');
   });
 
+  it('judges "planes are full" against the national benchmark when one is given', () => {
+    const base = { supplyGap: 0, delayRate: 0.1, nasShare: 0.1, documentedConstraints: 0 };
+    const above = demandPressure({ ...base, loadFactor: 0.84, loadFactorBenchmark: 0.83 });
+    expect(above.signals[0].met).toBe(true);
+    expect(above.signals[0].evidence).toBe('load factor 84% (national 83% for the same months)');
+    const below = demandPressure({ ...base, loadFactor: 0.82, loadFactorBenchmark: 0.83 });
+    expect(below.signals[0].met).toBe(false);
+    const equal = demandPressure({ ...base, loadFactor: 0.83, loadFactorBenchmark: 0.83 });
+    expect(equal.signals[0].met).toBe(false); // must be above, not equal
+  });
+
   it('says insufficient data rather than guessing when inputs are missing', () => {
     const r = demandPressure({ loadFactor: null, supplyGap: null, delayRate: 0.3, nasShare: null, documentedConstraints: 0 });
     expect(r.level).toBe('insufficient_data');

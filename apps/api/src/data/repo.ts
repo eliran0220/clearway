@@ -1,6 +1,6 @@
 // Read-only queries used by the agent tools. Simple, parameterized selects only:
 // aggregation happens in @clearway/core so it is unit-tested and identical everywhere.
-import { and, asc, between, desc, eq, ilike, inArray, max, or } from 'drizzle-orm';
+import { and, asc, between, desc, eq, ilike, inArray, like, max, or, sql } from 'drizzle-orm';
 import {
   airportConstraints,
   airportDelaysMonthly,
@@ -46,6 +46,22 @@ export async function trafficRows(db: Db, codes: string[], from: string, to: str
     .where(and(inArray(airportTrafficMonthly.airport, codes), between(airportTrafficMonthly.month, toDate(from), toDate(to))))
     .orderBy(asc(airportTrafficMonthly.airport), asc(airportTrafficMonthly.month));
   return rows.map((r) => ({ ...r, month: toMonth(r.month) }));
+}
+
+/** Outbound passengers and seats summed over all US airports (OurAirports region US-*) for a period: the national benchmark. */
+export async function nationalTraffic(db: Db, from: string, to: string) {
+  const [row] = await db
+    .select({
+      passengers: sql<number>`coalesce(sum(${airportTrafficMonthly.passengers}), 0)::float8`,
+      seats: sql<number>`coalesce(sum(${airportTrafficMonthly.seats}), 0)::float8`,
+      airports: sql<number>`count(distinct ${airportTrafficMonthly.airport})::int`,
+    })
+    .from(airportTrafficMonthly)
+    .innerJoin(airports, eq(airports.iata, airportTrafficMonthly.airport))
+    .where(and(between(airportTrafficMonthly.month, toDate(from), toDate(to)), like(airports.region, 'US-%')));
+  const passengers = Number(row?.passengers ?? 0);
+  const seats = Number(row?.seats ?? 0);
+  return { passengers, seats, airports: Number(row?.airports ?? 0), loadFactor: seats > 0 ? passengers / seats : null };
 }
 
 export async function delayRows(db: Db, codes: string[], from: string, to: string) {

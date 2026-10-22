@@ -17,6 +17,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "data:refresh": "tsx --env-file=.env apps/api/src/jobs/refresh-cli.ts",
+    "data:import": "tsx --env-file=.env apps/api/src/data/imports/cli.ts",
     "dev:api": "tsx watch --env-file=.env apps/api/src/dev.ts",
     "deploy": "sst deploy --stage prod"
   },

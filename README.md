@@ -11,7 +11,7 @@ Built for the Deloitte Digital Forward Deployed Engineer exercise "Airport Inves
 | Deterministic metrics and screening score (`packages/core`) | Done, 30 tests |
 | Database schema (`packages/db`) | Done, migrations to generate |
 | BTS monthly API adapter and daily refresh job (`apps/api`) | Done, tests on real API rows |
-| T-100 Segment and Delay Causes importers | Next |
+| T-100 Segment, Delay Causes and OurAirports importers | Done, checked on the full real exports |
 | Agent tools and chat route | Next |
 | Web app (`apps/web`) | Later |
 
@@ -39,6 +39,23 @@ npm run db:migrate            # applies them to Neon
 npm run data:refresh          # loads BTS monthly airport traffic (first run backfills from 2023-01)
 npm run dev:api               # http://localhost:8787/health
 ```
+
+### Importing the official files
+
+Download the exports from BTS TranStats, then unzip each into its own folder under `data/raw/` (git ignores it; both T-100 zips contain a file with the same name):
+
+```bash
+mkdir -p data/raw/t100-2025 data/raw/t100-2026 data/raw/delays
+unzip ~/Downloads/T_T100_SEGMENT_ALL_CARRIER_<2025 export>.zip -d data/raw/t100-2025
+unzip ~/Downloads/T_T100_SEGMENT_ALL_CARRIER_<2026 export>.zip -d data/raw/t100-2026
+unzip ~/Downloads/ot_delaycause1_DL.zip -d data/raw/delays
+
+npm run data:import -- airports
+npm run data:import -- t100 data/raw/t100-2025/T_T100_SEGMENT_ALL_CARRIER.csv data/raw/t100-2026/T_T100_SEGMENT_ALL_CARRIER.csv
+npm run data:import -- delays data/raw/delays/Airline_Delay_Cause.csv
+```
+
+Re-running an import is safe: T-100 replaces the months in the files, delays and airports are upserted. Every import is recorded in `source_fetches`.
 
 ## Data sources
 

@@ -26,12 +26,14 @@ export function LoadFactorLine({ months, benchmark, height = 64 }: { months: Mon
         {benchmark != null && <line x1={0} x2={width} y1={y(benchmark)} y2={y(benchmark)} stroke="var(--cw-muted)" strokeDasharray="4 4" strokeWidth={1} />}
         <polyline points={points} fill="none" stroke="var(--cw-brand-2)" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
       </svg>
-      <figcaption className="mt-1 flex justify-between text-xs text-muted">
-        <span>{monthLabel(first)}</span>
-        <span>
-          {low}% to {peak}%{benchmark != null && <>, dashed: national {benchmark}%</>}
+      <figcaption className="mt-1 text-xs text-muted">
+        <span className="flex justify-between">
+          <span>{monthLabel(first)}</span>
+          <span>{monthLabel(last)}</span>
         </span>
-        <span>{monthLabel(last)}</span>
+        <span className="block">
+          Monthly {low}% to {peak}%{benchmark != null && <>; dashed line: national {benchmark}%</>}
+        </span>
       </figcaption>
     </figure>
   );

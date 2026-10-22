@@ -19,6 +19,7 @@
     "data:refresh": "tsx --env-file=.env apps/api/src/jobs/refresh-cli.ts",
     "data:import": "tsx --env-file=.env apps/api/src/data/imports/cli.ts",
     "dev:api": "tsx watch --env-file=.env apps/api/src/dev.ts",
+    "dev:web": "npm run dev -w @clearway/web",
     "ask": "tsx --env-file=.env apps/api/src/agent/ask-cli.ts",
     "eval": "tsx --env-file=.env apps/api/src/agent/eval.ts",
     "deploy": "sst deploy --stage prod"

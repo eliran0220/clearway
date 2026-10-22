@@ -64,7 +64,15 @@ Every tool returns the same evidence envelope (period, sources with retrieval ti
 
 **Conversation hygiene.** Earlier turns' reasoning (thinking) blocks are dropped before a conversation is sent again: each is signed for the request that produced it and is rejected if replayed. Tool calls and results are kept. The system prompt carries today's date so the model can judge whether a live notice is current.
 
-## 6. Tradeoffs and decisions
+## 6. Interface and voice
+
+One page. The empty state offers the four exam questions. Each answer shows the tools the agent ran (a short trail), the answer text, then a card per result: ranking with score components, congestion table with delay causes, long-haul ring with threshold and scope controls, demand-pressure signals with the monthly load factor against the national line, traffic table, and live FAA and weather. Every card ends with its evidence: period, confidence, sources (live API, daily API, official file or curated) with retrieval time, assumptions and warnings. Controls on a card do not recalculate in the browser; they send a follow-up, so the tool recomputes and the evidence stays true.
+
+Voice uses the browser: speech recognition to ask (Chrome, Edge, Safari; hidden where unsupported) and speech synthesis to read the first paragraph of the answer when the question was spoken. No audio reaches our servers. A server transcription fallback was planned only if browser voice fell short.
+
+Look: the Horizon palette (midnight, indigo, sky), Public Sans (the US government's design-system typeface, fitting for federal data), the gradient kept to the logo, the send button and the long-haul ring. Light and dark follow the system setting.
+
+## 7. Tradeoffs and decisions
 
 | Decision | Why | Alternative |
 | --- | --- | --- |

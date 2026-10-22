@@ -14,12 +14,15 @@ Built for the Deloitte Digital Forward Deployed Engineer exercise "Airport Inves
 | T-100 Segment, Delay Causes and OurAirports importers | Done, checked on the full real exports |
 | Agent: 7 tools, system prompt, streaming `/chat` route, terminal client | Done, to be tried against the real data |
 | Curated constraints (SNA passenger cap, SFO arrival limits) | Done, `data/constraints.json` |
-| Web app (`apps/web`) | Next |
+| Evaluation (`npm run eval`) | 8 of 8 turns pass |
+| Web app (`apps/web`): chat, result cards, evidence, browser voice | Done, to be tried locally |
+| Deploy (Vercel + AWS via SST) | Next |
 
 ## Layout
 
 ```text
-apps/api/        Hono API for AWS Lambda: /health, /chat (agent), daily refresh job
+apps/web/        Next.js page: chat, result cards with evidence, methodology, browser voice
+apps/api/        Hono API for AWS Lambda: /health, /meta, /chat (agent), daily refresh job
 packages/core/   metrics, screening score, evidence envelope (no I/O)
 packages/db/     Drizzle schema and Neon client
 docs/            DESIGN.md
@@ -63,6 +66,16 @@ Curated constraints (each with a source URL and an as-of date) live in `data/con
 ```bash
 npm run data:import -- constraints
 ```
+
+### Running the web app locally
+
+```bash
+cp apps/web/.env.example apps/web/.env.local   # points the page at http://localhost:8787
+npm run dev:api                                  # terminal 1: the API
+npm run dev:web                                  # terminal 2: the page, http://localhost:3000
+```
+
+Voice input uses the browser's speech recognition (Chrome, Edge, Safari). Answers to spoken questions are read aloud.
 
 ### Talking to the agent from the terminal
 

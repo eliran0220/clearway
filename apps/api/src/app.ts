@@ -2,7 +2,8 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { convertToModelMessages, createUIMessageStreamResponse, streamText, toUIMessageStream, type UIMessage } from 'ai';
 import { METHODOLOGY_VERSION } from '@clearway/core';
-import { model, stopAfterMaxSteps, systemPrompt, tools, uiWithoutReasoning } from './agent/agent';
+import { getDb, model, stopAfterMaxSteps, systemPrompt, tools, uiWithoutReasoning } from './agent/agent';
+import { latestDelayMonth, latestSegmentMonth, latestTrafficMonth } from './data/repo';
 import { allowRequest } from './rate-limit';
 
 // CORS is handled here only. The Lambda Function URL has CORS turned off (sst.config.ts),
@@ -35,6 +36,14 @@ app.get('/health', (c) =>
     time: new Date().toISOString(),
   }),
 );
+
+/** How current each data source is, for the "data through" note in the web app. */
+app.get('/meta', async (c) => {
+  const db = getDb();
+  const [traffic, delays, routes] = await Promise.all([latestTrafficMonth(db), latestDelayMonth(db), latestSegmentMonth(db)]);
+  c.header('Cache-Control', 'public, max-age=300');
+  return c.json({ methodology: METHODOLOGY_VERSION, latest: { traffic, delays, routes } });
+});
 
 const textOf = (m: UIMessage) =>
   (m.parts ?? [])

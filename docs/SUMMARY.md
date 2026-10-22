@@ -1,6 +1,6 @@
 # Clearway in brief
 
-Clearway is an AI agent that helps analysts screen US airports for terminal investment. Claude reads the question, picks an analysis and explains the result; deterministic TypeScript computes every number from public aviation data, and each answer shows its period, sources, assumptions and confidence. Methodology and tradeoffs in detail: [DESIGN.md](DESIGN.md).
+Clearway is an AI agent that helps analysts screen US airports for terminal investment. Claude reads the question, picks an analysis and explains the result; deterministic TypeScript computes every number from public aviation data, and each answer shows its period, sources, assumptions and confidence. Live demo: [clearway-jade.vercel.app](https://clearway-jade.vercel.app). Methodology and tradeoffs in detail: [DESIGN.md](DESIGN.md).
 
 ## How we worked
 

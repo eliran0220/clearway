@@ -37,7 +37,7 @@ Formulas live in `packages/core` with unit tests. Summary:
 - Expansion screening score: four components on fixed ranges, weights 35/30/20/15 (growth, occupancy, delays, supply gap). Missing component = not scored; no silent re-weighting.
 - Flight growth (departures performed, cargo included) is reported next to passenger and seat growth but is not scored: seats already measure the flight capacity airlines add (flights times aircraft size), so scoring flights as well would count capacity twice.
 
-- Demand pressure (the "unmet demand" question): four signals. Planes are full = load factor above the national load factor for the same 12 months (all US airports in the BTS data); demand outpacing supply = supply gap above 0; operations strained = delay rate 25% or more, or NAS share above 40%; a documented constraint exists. 0-1 signals low, 2 moderate, 3-4 high.
+- Demand pressure (the "unmet demand" question): four signals. Planes are full = load factor above the national load factor for the same 12 months (all US airports in the BTS data; if that figure is unavailable, 85% is used and the evidence says so); demand outpacing supply = supply gap above 0; operations strained = delay rate 25% or more, or NAS share above 40%; a documented constraint exists. 0-1 signals low, 2 moderate, 3-4 high.
 
 Score weights and ranges are illustrative and uncalibrated; the score ignores airport size, so each ranked airport also reports its 12-month passengers and the user can raise the eligibility threshold. Calibration decision: "planes are full" was first a fixed 85%, but real SFO monthly load factors run 80 to 85%, so it is now measured against the national load factor for the same months instead of a chosen number. The ranking formula was kept as is, so it stays explainable component by component.
 
@@ -48,7 +48,7 @@ Claude (Sonnet, through the Vercel AI SDK) does three things: understands the qu
 | Tool | Answers | Data |
 | --- | --- | --- |
 | `resolveAirports` | Names, cities, codes, regions to IATA codes, with assumptions ("LA" means LAX) | OurAirports |
-| `getAirportMetrics` | Passengers, seats, growth, supply gap, load factor, monthly load factor | BTS API |
+| `getAirportMetrics` | Passengers, seats and flights, their growth, supply gap, load factor, monthly load factor | BTS API |
 | `rankExpansionCandidates` | Screening score per airport, every component, airports not ranked and why; weight scenarios | BTS API, Delay Causes |
 | `compareCongestion` | Delay, cancellation and NAS share, causes, volume, constraints, which airport is higher per metric | Delay Causes, BTS API, constraints |
 | `getLongHaulShare` | Share of departures at or over a threshold, both scopes, distance bands, top destinations | T-100 Segment |
@@ -57,7 +57,7 @@ Claude (Sonnet, through the Vercel AI SDK) does three things: understands the qu
 
 Every tool returns the same evidence envelope (period, sources with retrieval time and kind, assumptions, confidence, warnings, methodology version). Percentages come back rounded to one decimal so the model quotes them exactly.
 
-**Loop and guardrails.** Up to 6 model steps per question. Tool inputs are validated (Zod schemas, IATA codes checked, no free text into SQL). The model has no free SQL, no URL fetching and no file access. Tool output is treated as data, never instructions. The public endpoint has a per-instance rate limit (20 requests per 10 minutes per IP), a 2,000-character question cap and a 40-message conversation cap; the hard cost cap is the Anthropic workspace spend limit.
+**Loop and guardrails.** Up to 6 model steps per question. Tool inputs are validated (Zod schemas, IATA codes checked, no free text into SQL). The model has no free SQL, no URL fetching and no file access. Tool output is treated as data, never instructions. The public endpoint has a per-instance rate limit (20 requests per 10 minutes per IP), a 2,000-character cap on each question, a 40-message and 600,000-character cap on the conversation, and only user and assistant messages accepted (a client cannot add system instructions); the hard cost cap is the Anthropic workspace spend limit.
 
 **Follow-ups.** The web client sends the conversation, including earlier tool calls, so "now use 5,000 km" or "less weight on delays" re-runs the tool with one changed argument. Weight changes are partial overrides; the remaining weight is spread over the other components in their default proportions, and the result is labeled as a scenario.
 
@@ -77,7 +77,7 @@ Look: the Horizon palette (midnight, indigo, sky), Public Sans (the US governmen
 
 ## 7. Testing
 
-- **Unit tests** (92): every formula and the score in `packages/core`, the CSV, BTS and import mappers, the FAA and METAR parsers (including NOTAM validity windows), alias and region resolution, the provenance check, and the web app's number formatting. CI runs them with the typecheck and a production build of the web app.
+- **Unit tests** (98): every formula and the score in `packages/core`, the CSV, BTS and import mappers, the FAA and METAR parsers (including NOTAM validity windows), alias and region resolution, the provenance check, the chat request checks, and the web app's number formatting. CI runs them with the typecheck and a production build of the web app.
 - **Evaluation** (`npm run eval`): the four exam questions, three follow-ups and an out-of-scope question against the real data and model; a turn fails on a missing tool or argument, or on any number in the answer that no tool returned. 8 of 8 pass.
 - **Sanity check** (`npm run smoke`): after a change or a deploy, checks the API is up, the data is loaded, CORS admits the web app, bad requests are refused, and each exam question runs its tool end to end. It takes about two minutes and costs four model calls.
 - **Browser pass**: all questions, follow-ups and card controls run in Chrome at desktop and phone width, in light and dark. It found and fixed an FAA closure misread as expired (the feed's own dates have no year; the NOTAM's validity window is now parsed), internal names leaking into answers, chart colors too close in dark mode and a ranking row that hid passenger counts.
@@ -87,6 +87,7 @@ Look: the Horizon palette (midnight, indigo, sky), Public Sans (the US governmen
 | Decision | Why | Alternative |
 | --- | --- | --- |
 | API + official file imports | No free API has route distances or delay causes per airport | API-only would drop two of the four sample questions |
+| BTS traffic stored by a daily job, not fetched per question | BTS publishes monthly; one ranking needs two years of many airports plus a national total, which is many paged API calls; stored data answers in milliseconds and survives a BTS outage | Per-question API calls: no fresher, much slower, and fragile. FAA and NOAA, which change by the minute, are fetched per question |
 | Neon over Aurora Serverless v2 | Free, fast wake-up, HTTP driver for Lambda; Aurora resumes in about 15 to 30 s | Aurora for an all-AWS production client: same Postgres, change the connection string |
 | Lambda region us-east-2 | Neon project is in us-east-2 | |
 | CORS in Hono only | The Function URL's default CORS plus middleware would send duplicate headers | |

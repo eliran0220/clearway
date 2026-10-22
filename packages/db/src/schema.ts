@@ -24,7 +24,7 @@ export const sourceFetches = pgTable('source_fetches', {
   retrievedAt: timestamp('retrieved_at', { withTimezone: true }).notNull().defaultNow(),
   periodStart: date('period_start', { mode: 'string' }),
   periodEnd: date('period_end', { mode: 'string' }),
-  status: text('status').notNull(), // 'ok' | 'empty' | 'error'
+  status: text('status').notNull(), // 'running' until stored, then 'ok' | 'empty' | 'error'
   rowCount: integer('row_count'),
   note: text('note'),
 });

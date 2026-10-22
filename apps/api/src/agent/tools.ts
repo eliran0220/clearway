@@ -11,6 +11,7 @@ import {
   longHaulShare,
   rankCandidates,
   scenarioWeights,
+  sumWindow,
   toolResult,
   trafficSummary,
   type Candidate,
@@ -333,7 +334,8 @@ export function createTools(getDb: () => Db) {
           const c = congestion(rows);
           raw[code] = c;
           const causes = delayCauseShares(rows);
-          const deps = (trafficByAirport.get(code) ?? []).reduce((s, r) => s + (r.departures ?? 0), 0);
+          // Null when any month is missing: a partial total would understate the airport's flights.
+          const deps = sumWindow(trafficByAirport.get(code) ?? [], win.w1, 'departures');
           return {
             airport: code,
             name: nameOf(names, code),
@@ -349,7 +351,7 @@ export function createTools(getDb: () => Db) {
               weather: pct(causes.weather),
               security: pct(causes.security),
             },
-            departures12m: deps || null,
+            departures12m: deps,
           };
         });
         const higher = higherPerMetric(

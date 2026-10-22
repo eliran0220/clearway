@@ -14,7 +14,7 @@ Built for the Deloitte Digital Forward Deployed Engineer exercise "Airport Inves
 | Database schema and migrations (`packages/db`) | Done, applied to Neon |
 | BTS monthly API adapter and daily refresh job (`apps/api`) | Done, tested on real API rows |
 | T-100 Segment, Delay Causes and OurAirports importers | Done, run on the full real exports |
-| Agent: 7 tools, system prompt, streaming `/chat` route, terminal client | Done, 52 unit tests |
+| Agent: 7 tools, system prompt, streaming `/chat` route, terminal client | Done, 58 unit tests |
 | Curated constraints (SNA passenger cap, SFO arrival limits) | Done, `data/constraints.json` |
 | Evaluation (`npm run eval`) | 8 of 8 turns pass |
 | Web app (`apps/web`): chat, result cards, evidence, browser voice | Done, tested in Chrome (desktop, phone width, light and dark), 5 unit tests |

@@ -4,6 +4,7 @@ import { convertToModelMessages, createUIMessageStreamResponse, streamText, toUI
 import { METHODOLOGY_VERSION } from '@clearway/core';
 import { getDb, model, stopAfterMaxSteps, systemPrompt, tools, uiWithoutReasoning } from './agent/agent';
 import { latestDelayMonth, latestSegmentMonth, latestTrafficMonth } from './data/repo';
+import { checkChatBody } from './chat-input';
 import { allowRequest, RATE_LIMIT } from './rate-limit';
 
 // CORS is handled here only. The Lambda Function URL has CORS turned off (sst.config.ts),
@@ -12,9 +13,6 @@ const allowedOrigins = (process.env.ALLOWED_ORIGINS ?? 'http://localhost:3000')
   .split(',')
   .map((o) => o.trim())
   .filter(Boolean);
-
-const MAX_MESSAGE_CHARS = 2000;
-const MAX_MESSAGES = 40;
 
 export const app = new Hono();
 
@@ -53,14 +51,6 @@ app.get('/meta', async (c) => {
   return c.json({ methodology: METHODOLOGY_VERSION, latest: metaCache.latest });
 });
 
-const textOf = (m: UIMessage) =>
-  (m.parts ?? [])
-    .map((p) => {
-      const part = p as { type: string; text?: string };
-      return part.type === 'text' ? (part.text ?? '') : '';
-    })
-    .join('');
-
 /**
  * The caller's address for the rate limit. On Lambda the request context records the real source
  * IP; X-Forwarded-For is only a fallback (local dev), because a client can put anything in it.
@@ -76,17 +66,9 @@ app.post('/chat', async (c) => {
     return c.json({ error: `You've asked ${RATE_LIMIT.maxRequests} questions in ${RATE_LIMIT.windowMinutes} minutes, the limit for this demo. Wait a few minutes and ask again.` }, 429);
   }
 
-  let body: { messages?: UIMessage[] };
-  try {
-    body = await c.req.json();
-  } catch {
-    return c.json({ error: 'Invalid JSON body' }, 400);
-  }
-  const messages = body.messages;
-  if (!Array.isArray(messages) || messages.length === 0) return c.json({ error: 'messages is required' }, 400);
-  if (messages.length > MAX_MESSAGES) return c.json({ error: 'This conversation is too long. Start a new chat.' }, 400);
-  const last = messages.at(-1) as UIMessage;
-  if (textOf(last).length > MAX_MESSAGE_CHARS) return c.json({ error: `Please keep questions under ${MAX_MESSAGE_CHARS} characters.` }, 400);
+  const checked = checkChatBody<UIMessage>(await c.req.text());
+  if (!checked.ok) return c.json({ error: checked.error }, checked.status);
+  const { messages } = checked;
 
   const result = streamText({
     model: model(),

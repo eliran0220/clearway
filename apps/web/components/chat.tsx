@@ -2,12 +2,13 @@
 
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
-import { ArrowUp, BookOpen, Mic, Plus, Square, TrendingUp, VolumeX } from 'lucide-react';
+import { ArrowUp, BookOpen, Mic, Plus, Square, VolumeX } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { API_URL, monthLabel, speakable } from '@/lib/format';
 import { isToolPart, toolNameOf, type ToolPart } from '@/lib/types';
 import { useVoice } from '@/lib/use-voice';
 import { Message, textOf } from './message';
+import { LogoMark } from './logo';
 import { Methodology } from './methodology';
 
 const QUESTIONS = [
@@ -111,9 +112,7 @@ export function Chat() {
       <header className="sticky top-0 z-30 border-b border-line bg-surface/90 backdrop-blur">
         <div className="mx-auto flex max-w-3xl flex-wrap items-center gap-3 px-4 py-3">
           <div className="flex items-center gap-2.5">
-            <span className="horizon grid size-9 place-items-center rounded-xl text-white">
-              <TrendingUp aria-hidden className="size-5" />
-            </span>
+            <LogoMark className="size-9 shrink-0" />
             <span className="leading-tight">
               <span className="block text-[17px] font-bold tracking-tight">Clearway</span>
               <span className="block text-xs text-muted">Airport investment screening</span>

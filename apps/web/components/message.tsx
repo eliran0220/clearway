@@ -4,6 +4,7 @@ import type { UIMessage } from 'ai';
 import { Check, CircleAlert, LoaderCircle, Volume2 } from 'lucide-react';
 import type { CongestionData, Envelope, LiveData, LongHaulData, MetricsData, PressureData, RankingData, ToolPart } from '@/lib/types';
 import { isToolPart, toolNameOf } from '@/lib/types';
+import { splitLead } from '@/lib/format';
 import { AnswerText } from './markdown';
 import { CongestionCard } from './cards/congestion-card';
 import { LiveCard } from './cards/live-card';
@@ -96,12 +97,6 @@ function ResultCard({ part, onAsk, busy }: { part: ToolPart; onAsk: (text: strin
     default:
       return null; // resolveAirports shows in the trail only
   }
-}
-
-/** The answer's first paragraph (the direct answer) and the rest, so the cards can sit between them. */
-function splitLead(text: string): [string, string] {
-  const m = /\n\s*\n/.exec(text);
-  return m ? [text.slice(0, m.index), text.slice(m.index + m[0].length)] : [text, ''];
 }
 
 export const textOf = (m: UIMessage) =>

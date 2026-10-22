@@ -33,6 +33,7 @@ export function Chat() {
   const closeMethodology = useCallback(() => setMethodologyOpen(false), []);
   const [dataThrough, setDataThrough] = useState<string | null>(null);
   const voiceTurn = useRef(false);
+  const following = useRef(true);
   const endRef = useRef<HTMLDivElement>(null);
   const busy = status === 'submitted' || status === 'streaming';
 
@@ -40,6 +41,7 @@ export function Chat() {
     const question = text.trim();
     if (!question || busy) return;
     voiceTurn.current = viaVoice;
+    following.current = true;
     voice.stopSpeaking();
     void sendMessage({ text: question });
     setDraft('');
@@ -55,8 +57,17 @@ export function Chat() {
     if (last?.role === 'assistant') voice.speak(speakable(textOf(last)));
   }, [status, messages, voice]);
 
+  // Follow the answer as it streams, but only while the reader is at the bottom: scrolling up to read
+  // an earlier card stops the follow, and asking a new question turns it back on.
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    const onScroll = () => {
+      following.current = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 160;
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+  useEffect(() => {
+    if (following.current) endRef.current?.scrollIntoView({ block: 'end' });
   }, [messages, status]);
 
   useEffect(() => {

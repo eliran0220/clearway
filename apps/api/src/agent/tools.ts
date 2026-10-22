@@ -21,6 +21,7 @@ import type { Db } from '@clearway/db';
 import * as repo from '../data/repo';
 import { SOURCES, type SourceId } from '../data/sources';
 import {
+  byAirport,
   chooseEnd,
   delayCauseShares,
   distanceBands,
@@ -70,8 +71,9 @@ async function trafficAndDelayWindow(db: Db, endMonth?: string) {
 }
 
 function monthlyLoadFactor(rows: { month: string; passengers: number | null; seats: number | null }[], months: string[]) {
+  const byMonth = new Map(rows.map((r) => [r.month, r]));
   return months.map((month) => {
-    const r = rows.find((x) => x.month === month);
+    const r = byMonth.get(month);
     return { month, loadFactorPct: r && r.passengers != null && r.seats ? pct(r.passengers / r.seats) : null };
   });
 }
@@ -129,7 +131,7 @@ export function createTools(getDb: () => Db) {
 
     getAirportMetrics: tool({
       description:
-        'Passenger and seat totals, year-over-year growth, supply gap and load factor for 1 to 10 airports over the same 12 months, plus the monthly load factor. Use for follow-ups such as "how busy is X" or "compare growth".',
+        'Passenger, seat and flight (departure) totals, year-over-year growth, supply gap and load factor for 1 to 10 airports over the same 12 months, plus the monthly load factor. Use for follow-ups such as "how busy is X" or "compare growth".',
       inputSchema: z.object({ airports: codesSchema, endMonth: monthSchema.optional() }),
       execute: async ({ airports, endMonth }) => {
         const db = getDb();
@@ -145,8 +147,9 @@ export function createTools(getDb: () => Db) {
           sourcesFor(db, ['bts-monthly-api']),
         ]);
         const warnings = warning ? [warning] : [];
+        const rowsByAirport = byAirport(rows);
         const data = codes.map((code) => {
-          const own = rows.filter((r) => r.airport === code);
+          const own = rowsByAirport.get(code) ?? [];
           const s = trafficSummary(own, win.w1, win.w0);
           if (s.passengersW1 == null || s.passengersW0 == null) warnings.push(`${code}: some months are missing in the window, so growth is unavailable.`);
           return {
@@ -155,8 +158,10 @@ export function createTools(getDb: () => Db) {
             passengers12m: s.passengersW1,
             passengersPrior12m: s.passengersW0,
             seats12m: s.seatsW1,
+            departures12m: s.departuresW1,
             passengerGrowthPct: pct(s.passengerGrowth),
             seatGrowthPct: pct(s.seatGrowth),
+            flightGrowthPct: pct(s.flightGrowth),
             supplyGapPts: pts(s.supplyGap),
             loadFactorPct: pct(s.loadFactor),
             monthlyLoadFactorPct: monthlyLoadFactor(own, win.w1),
@@ -173,7 +178,11 @@ export function createTools(getDb: () => Db) {
             sources,
             confidence: 'high',
             warnings,
-            assumptions: ['Outbound traffic: passengers and seats on flights departing the airport.', 'Passenger counts are segment passengers, not unique travelers.'],
+            assumptions: [
+              'Outbound traffic: passengers, seats and flights departing the airport.',
+              'Passenger counts are segment passengers, not unique travelers.',
+              'Flights are departures performed by all commercial services, cargo included.',
+            ],
           },
         );
       },
@@ -218,9 +227,11 @@ export function createTools(getDb: () => Db) {
           sourcesFor(db, ['bts-monthly-api', 'delay-causes-file', 'ourairports']),
         ]);
 
+        const trafficByAirport = byAirport(traffic);
+        const delaysByAirport = byAirport(delays);
         const candidates: Candidate[] = codes.map((code) => {
-          const s = trafficSummary(traffic.filter((r) => r.airport === code), win.w1, win.w0);
-          const d = delays.filter((r) => r.airport === code);
+          const s = trafficSummary(trafficByAirport.get(code) ?? [], win.w1, win.w0);
+          const d = delaysByAirport.get(code) ?? [];
           return {
             airport: code,
             passengersW1: s.passengersW1,
@@ -234,6 +245,7 @@ export function createTools(getDb: () => Db) {
         const base = { ...SCREENING_V1, minPassengers: minPassengers ?? SCREENING_V1.minPassengers };
         const cfg = weights && Object.values(weights).some((w) => w !== undefined) ? scenarioWeights(base, weights as Partial<Record<ComponentKey, number>>, 'custom weights') : base;
         const ranking = rankCandidates(candidates, cfg);
+        const passengersOf = new Map(candidates.map((c) => [c.airport, c.passengersW1]));
 
         const display = (key: ComponentKey, raw: number) => (key === 'supplyGap' ? { value: pts(raw), unit: 'pts' } : { value: pct(raw), unit: '%' });
         return toolResult(
@@ -255,7 +267,7 @@ export function createTools(getDb: () => Db) {
               airport: r.airport,
               name: nameOf(names, r.airport),
               score: r.score,
-              passengers12m: candidates.find((c) => c.airport === r.airport)?.passengersW1 ?? null,
+              passengers12m: passengersOf.get(r.airport) ?? null,
               components: r.components.map((c) => ({
                 key: c.key,
                 label: c.label,
@@ -270,7 +282,7 @@ export function createTools(getDb: () => Db) {
               name: nameOf(names, e.airport),
               status: e.status,
               reason: e.reason,
-              passengers12m: candidates.find((c) => c.airport === e.airport)?.passengersW1 ?? null,
+              passengers12m: passengersOf.get(e.airport) ?? null,
             })),
             counts: {
               checked: codes.length,
@@ -313,13 +325,15 @@ export function createTools(getDb: () => Db) {
         ]);
         const warnings = warning ? [warning] : [];
         const raw: Record<string, ReturnType<typeof congestion>> = {};
+        const delaysByAirport = byAirport(delays);
+        const trafficByAirport = byAirport(traffic);
         const data = codes.map((code) => {
-          const rows = toCoreDelayRows(delays.filter((r) => r.airport === code));
+          const rows = toCoreDelayRows(delaysByAirport.get(code) ?? []);
           if (rows.length === 0) warnings.push(`${code}: no delay data in the window (it may not be served by reporting carriers).`);
           const c = congestion(rows);
           raw[code] = c;
           const causes = delayCauseShares(rows);
-          const deps = traffic.filter((r) => r.airport === code).reduce((s, r) => s + (r.departures ?? 0), 0);
+          const deps = (trafficByAirport.get(code) ?? []).reduce((s, r) => s + (r.departures ?? 0), 0);
           return {
             airport: code,
             name: nameOf(names, code),
@@ -481,6 +495,7 @@ export function createTools(getDb: () => Db) {
               nationalLoadFactorPct: pct(national.loadFactor),
               passengerGrowthPct: pct(s.passengerGrowth),
               seatGrowthPct: pct(s.seatGrowth),
+              flightGrowthPct: pct(s.flightGrowth),
               supplyGapPts: pts(s.supplyGap),
               delayRatePct: pct(c?.delayRate),
               nasSharePct: pct(c?.nasShare),

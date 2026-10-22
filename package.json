@@ -22,14 +22,15 @@
     "dev:web": "npm run dev -w @clearway/web",
     "ask": "tsx --env-file=.env apps/api/src/agent/ask-cli.ts",
     "eval": "tsx --env-file=.env apps/api/src/agent/eval.ts",
+    "smoke": "tsx apps/api/src/smoke.ts",
     "deploy": "sst deploy --stage prod"
   },
   "devDependencies": {
-    "@types/node": "latest",
-    "drizzle-kit": "latest",
-    "sst": "latest",
-    "tsx": "latest",
-    "typescript": "latest",
-    "vitest": "latest"
+    "@types/node": "^26.6.5",
+    "drizzle-kit": "^0.31.11",
+    "sst": "^4.17.2",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5"
   }
 }

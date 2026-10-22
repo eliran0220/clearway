@@ -44,6 +44,8 @@ export function PressureCard({ envelope }: { envelope: Envelope<PressureData> })
           <dd className="font-semibold">{signedPct(m.passengerGrowthPct)}</dd>
           <dt className="text-muted">Seat growth</dt>
           <dd className="font-semibold">{signedPct(m.seatGrowthPct)}</dd>
+          <dt className="text-muted">Flight growth</dt>
+          <dd className="font-semibold">{signedPct(m.flightGrowthPct)}</dd>
           <dt className="text-muted">Supply gap</dt>
           <dd className="font-semibold">{pts(m.supplyGapPts)}</dd>
           <dt className="text-muted">Delayed 15+ min</dt>

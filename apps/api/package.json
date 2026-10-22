@@ -9,14 +9,16 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "latest",
+    "@ai-sdk/anthropic": "^4.0.85",
     "@clearway/core": "*",
     "@clearway/db": "*",
-    "@hono/aws-lambda": "latest",
-    "@hono/node-server": "latest",
-    "ai": "latest",
-    "drizzle-orm": "latest",
-    "hono": "latest",
-    "zod": "latest"
+    "@hono/aws-lambda": "^1.0.1",
+    "ai": "^7.0.148",
+    "drizzle-orm": "^0.45.4",
+    "hono": "^4.13.13",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@hono/node-server": "^2.1.5"
   }
 }

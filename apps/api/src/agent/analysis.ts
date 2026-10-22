@@ -219,3 +219,14 @@ export function higherPerMetric(items: { airport: string; values: Record<string,
 }
 
 export const round = (x: number | null, digits = 4) => (x == null ? null : Math.round(x * 10 ** digits) / 10 ** digits);
+
+/** Groups rows by airport code in one pass, so per-airport work is not a filter over every row. */
+export function byAirport<T extends { airport: string }>(rows: T[]): Map<string, T[]> {
+  const groups = new Map<string, T[]>();
+  for (const r of rows) {
+    const list = groups.get(r.airport);
+    if (list) list.push(r);
+    else groups.set(r.airport, [r]);
+  }
+  return groups;
+}

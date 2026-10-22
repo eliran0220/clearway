@@ -8,14 +8,15 @@ Built for the Deloitte Digital Forward Deployed Engineer exercise "Airport Inves
 
 | Part | State |
 | --- | --- |
-| Deterministic metrics and screening score (`packages/core`) | Done, 30 tests |
-| Database schema (`packages/db`) | Done, migrations to generate |
-| BTS monthly API adapter and daily refresh job (`apps/api`) | Done, tests on real API rows |
-| T-100 Segment, Delay Causes and OurAirports importers | Done, checked on the full real exports |
-| Agent: 7 tools, system prompt, streaming `/chat` route, terminal client | Done, to be tried against the real data |
+| Deterministic metrics and screening score (`packages/core`) | Done, 35 unit tests |
+| Database schema and migrations (`packages/db`) | Done, applied to Neon |
+| BTS monthly API adapter and daily refresh job (`apps/api`) | Done, tested on real API rows |
+| T-100 Segment, Delay Causes and OurAirports importers | Done, run on the full real exports |
+| Agent: 7 tools, system prompt, streaming `/chat` route, terminal client | Done, 52 unit tests |
 | Curated constraints (SNA passenger cap, SFO arrival limits) | Done, `data/constraints.json` |
 | Evaluation (`npm run eval`) | 8 of 8 turns pass |
-| Web app (`apps/web`): chat, result cards, evidence, browser voice | Done, to be tried locally |
+| Web app (`apps/web`): chat, result cards, evidence, browser voice | Done, tested in Chrome (desktop, phone width, light and dark), 5 unit tests |
+| Sanity check (`npm run smoke`) | Done |
 | Deploy (Vercel + AWS via SST) | Next |
 
 ## Layout
@@ -95,6 +96,16 @@ npm run eval -- --verbose      # print every answer
 ```
 
 A turn fails if the expected tool or argument is missing, or if the answer contains a number that no tool returned.
+
+### Sanity check
+
+Run after any change and after every deploy. It checks the API is up, the data is loaded, CORS admits the web app, bad requests are refused, and each exam question runs its tool end to end (four model calls).
+
+```bash
+npm run smoke                                                     # local: API on :8787, web origin http://localhost:3000
+npm run smoke -- --api https://<lambda-url> --web https://<app>.vercel.app
+npm run smoke -- --quick                                          # one question instead of four
+```
 
 ## Data sources
 

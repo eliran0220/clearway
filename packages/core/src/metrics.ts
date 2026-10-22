@@ -11,6 +11,7 @@ export interface TrafficRow {
   month: Month;
   passengers: number | null;
   seats: number | null;
+  departures?: number | null; // flights performed; all commercial services
 }
 
 export interface SegmentRow {
@@ -91,7 +92,7 @@ export function growth(current: number | null, baseline: number | null): number 
   return current / baseline - 1;
 }
 
-export function sumWindow(rows: TrafficRow[], window: Month[], field: 'passengers' | 'seats'): number | null {
+export function sumWindow(rows: TrafficRow[], window: Month[], field: 'passengers' | 'seats' | 'departures'): number | null {
   const byMonth = new Map(rows.map((r) => [r.month, r]));
   let total = 0;
   for (const m of window) {
@@ -123,6 +124,9 @@ export interface TrafficSummary {
   seatGrowth: number | null;
   supplyGap: number | null; // passengerGrowth - seatGrowth
   loadFactor: number | null; // over W1
+  departuresW1: number | null;
+  departuresW0: number | null;
+  flightGrowth: number | null; // departures performed, recent 12 months vs the 12 before
 }
 
 export function trafficSummary(rows: TrafficRow[], w1: Month[], w0: Month[]): TrafficSummary {
@@ -134,7 +138,12 @@ export function trafficSummary(rows: TrafficRow[], w1: Month[], w0: Month[]): Tr
   const seatGrowth = growth(seatsW1, seatsW0);
   const supplyGap = passengerGrowth != null && seatGrowth != null ? passengerGrowth - seatGrowth : null;
   const lf = passengersW1 != null && seatsW1 != null && seatsW1 > 0 ? passengersW1 / seatsW1 : null;
-  return { passengersW1, passengersW0, seatsW1, seatsW0, passengerGrowth, seatGrowth, supplyGap, loadFactor: lf };
+  const departuresW1 = sumWindow(rows, w1, 'departures');
+  const departuresW0 = sumWindow(rows, w0, 'departures');
+  return {
+    passengersW1, passengersW0, seatsW1, seatsW0, passengerGrowth, seatGrowth, supplyGap, loadFactor: lf,
+    departuresW1, departuresW0, flightGrowth: growth(departuresW1, departuresW0),
+  };
 }
 
 // ---------- congestion ----------

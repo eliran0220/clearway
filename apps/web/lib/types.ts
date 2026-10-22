@@ -98,6 +98,7 @@ export interface PressureData {
     nationalLoadFactorPct: number | null;
     passengerGrowthPct: number | null;
     seatGrowthPct: number | null;
+    flightGrowthPct?: number | null;
     supplyGapPts: number | null;
     delayRatePct: number | null;
     nasSharePct: number | null;
@@ -114,8 +115,10 @@ export interface MetricsData {
     passengers12m: number | null;
     passengersPrior12m: number | null;
     seats12m: number | null;
+    departures12m?: number | null;
     passengerGrowthPct: number | null;
     seatGrowthPct: number | null;
+    flightGrowthPct?: number | null;
     supplyGapPts: number | null;
     loadFactorPct: number | null;
     monthlyLoadFactorPct: MonthlyLoadFactor[];

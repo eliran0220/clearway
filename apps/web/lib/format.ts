@@ -68,3 +68,9 @@ export function speakable(markdown: string): string {
     .replace(/\s+/g, ' ')
     .trim();
 }
+
+/** The answer's first paragraph (the direct answer) and the rest, so the result cards can sit between them. */
+export function splitLead(text: string): [string, string] {
+  const m = /\n\s*\n/.exec(text);
+  return m ? [text.slice(0, m.index), text.slice(m.index + m[0].length)] : [text, ''];
+}

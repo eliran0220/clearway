@@ -9,18 +9,25 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 24
+          cache: npm
 
+      # The lockfile pins every version; it must be committed after dependencies change.
       - name: Install
-        run: |
-          if [ -f package-lock.json ]; then npm ci; else npm install; fi
+        run: npm ci
 
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Test
+      - name: Unit tests
         run: npm test
+
+      # Catches anything that would break the Vercel build before it gets there.
+      - name: Build the web app
+        run: npm run build -w @clearway/web
+        env:
+          NEXT_PUBLIC_API_URL: https://example.invalid

@@ -1,7 +1,7 @@
 // Daily job: upserts the newest BTS monthly airport traffic into Postgres.
 // BTS publishes monthly, so most runs change little; recent months are re-fetched to catch revisions.
 
-import { sql, max } from 'drizzle-orm';
+import { eq, sql, max } from 'drizzle-orm';
 import { airportTrafficMonthly, createDb, sourceFetches, type Db } from '@clearway/db';
 import { shiftMonth } from '@clearway/core';
 import { BTS_MONTHLY_URL, BTS_SOURCE_ID, dedupe, fetchBtsTraffic } from '../data/providers/bts';
@@ -66,7 +66,8 @@ export async function refreshTraffic(opts: { db?: Db; since?: string } = {}): Pr
       retrievedAt: new Date(fetched.retrievedAt),
       periodStart: `${months[0]}-01`,
       periodEnd: `${months.at(-1)}-01`,
-      status: 'ok',
+      // 'running' until every batch is stored, so a half-finished load never counts as the latest good fetch.
+      status: 'running',
       rowCount: rows.length,
       note: duplicates ? `${duplicates} duplicate airport-month rows skipped` : null,
     })
@@ -88,6 +89,26 @@ export async function refreshTraffic(opts: { db?: Db; since?: string } = {}): Pr
     fetchId: fetchRow?.id ?? null,
   }));
 
+  try {
+    await upsertBatches(db, values);
+  } catch (err) {
+    if (fetchRow) await db.update(sourceFetches).set({ status: 'error', note: err instanceof Error ? err.message : String(err) }).where(eq(sourceFetches.id, fetchRow.id));
+    throw err;
+  }
+  if (fetchRow) await db.update(sourceFetches).set({ status: 'ok' }).where(eq(sourceFetches.id, fetchRow.id));
+
+  return {
+    status: 'ok',
+    since,
+    rows: values.length,
+    airports: new Set(rows.map((r) => r.airport)).size,
+    latestMonth: months.at(-1) ?? null,
+    duplicatesSkipped: duplicates,
+    fetchId: fetchRow?.id ?? null,
+  };
+}
+
+async function upsertBatches(db: Db, values: (typeof airportTrafficMonthly.$inferInsert)[]) {
   for (let i = 0; i < values.length; i += BATCH) {
     await db
       .insert(airportTrafficMonthly)
@@ -109,16 +130,6 @@ export async function refreshTraffic(opts: { db?: Db; since?: string } = {}): Pr
         },
       });
   }
-
-  return {
-    status: 'ok',
-    since,
-    rows: values.length,
-    airports: new Set(rows.map((r) => r.airport)).size,
-    latestMonth: months.at(-1) ?? null,
-    duplicatesSkipped: duplicates,
-    fetchId: fetchRow?.id ?? null,
-  };
 }
 
 /** Lambda entry point for the EventBridge schedule. */

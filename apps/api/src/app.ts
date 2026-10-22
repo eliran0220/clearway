@@ -1,4 +1,4 @@
-import { Hono } from 'hono';
+import { Hono, type Context } from 'hono';
 import { cors } from 'hono/cors';
 import { convertToModelMessages, createUIMessageStreamResponse, streamText, toUIMessageStream, type UIMessage } from 'ai';
 import { METHODOLOGY_VERSION } from '@clearway/core';
@@ -37,12 +37,20 @@ app.get('/health', (c) =>
   }),
 );
 
+// Latest months change at most once a day, and the route table is large (a max() over it scans it),
+// so each instance keeps the answer for 10 minutes.
+const META_TTL_MS = 10 * 60 * 1000;
+let metaCache: { at: number; latest: { traffic: string | null; delays: string | null; routes: string | null } } | null = null;
+
 /** How current each data source is, for the "data through" note in the web app. */
 app.get('/meta', async (c) => {
-  const db = getDb();
-  const [traffic, delays, routes] = await Promise.all([latestTrafficMonth(db), latestDelayMonth(db), latestSegmentMonth(db)]);
+  if (!metaCache || Date.now() - metaCache.at > META_TTL_MS) {
+    const db = getDb();
+    const [traffic, delays, routes] = await Promise.all([latestTrafficMonth(db), latestDelayMonth(db), latestSegmentMonth(db)]);
+    metaCache = { at: Date.now(), latest: { traffic, delays, routes } };
+  }
   c.header('Cache-Control', 'public, max-age=300');
-  return c.json({ methodology: METHODOLOGY_VERSION, latest: { traffic, delays, routes } });
+  return c.json({ methodology: METHODOLOGY_VERSION, latest: metaCache.latest });
 });
 
 const textOf = (m: UIMessage) =>
@@ -53,8 +61,17 @@ const textOf = (m: UIMessage) =>
     })
     .join('');
 
+/**
+ * The caller's address for the rate limit. On Lambda the request context records the real source
+ * IP; X-Forwarded-For is only a fallback (local dev), because a client can put anything in it.
+ */
+function clientIp(c: Context): string {
+  const env = c.env as { requestContext?: { http?: { sourceIp?: string } } } | undefined;
+  return env?.requestContext?.http?.sourceIp || c.req.header('x-forwarded-for')?.split(',')[0]?.trim() || 'local';
+}
+
 app.post('/chat', async (c) => {
-  const ip = c.req.header('x-forwarded-for')?.split(',')[0]?.trim() || 'local';
+  const ip = clientIp(c);
   if (!allowRequest(ip)) return c.json({ error: 'Too many questions in a short time. Please wait a few minutes.' }, 429);
 
   let body: { messages?: UIMessage[] };

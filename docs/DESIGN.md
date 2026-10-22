@@ -1,10 +1,12 @@
 # Clearway design
 
-Living document; it becomes the short design note submitted with the code.
+Clearway is an AI agent that helps analysts at an airport-modernization investor find US airports where more terminal capacity is likely to pay off. This note covers the scoring methodology, the key tradeoffs and where AI is used.
 
 ## 1. Problem and scope
 
-An investment firm wants to know which US airports are worth a closer look for terminal expansion. Clearway is a screening assistant: it ranks and compares airports on traffic pressure and explains why. It does not estimate ROI, construction cost or feasibility; a high score means "worth a terminal-capacity study".
+The brief asks for airports "where renovations will be most profitable based on increased flight and passenger capacity". Public data has no construction costs, airport revenues or lease terms, so profit cannot be computed honestly. What it does show is the demand side of the case: traffic that is growing, planes that are full, airlines not adding seats as fast as passengers arrive, and operations that are already strained. Those are the conditions in which added terminal capacity earns its keep, so Clearway screens for them.
+
+Clearway therefore ranks and compares airports on demand pressure and explains why. It does not estimate ROI, construction cost or feasibility; a high score means "worth a terminal-capacity study", and the agent says so whenever it is asked about returns.
 
 ## 2. Architecture
 
@@ -33,6 +35,7 @@ Formulas live in `packages/core` with unit tests. Summary:
 - Congestion: arrivals delayed 15+ minutes / arrivals, cancellations / arrivals, NAS share of delay minutes, from summed counts.
 - Long-haul share = departures performed on routes of 4,000 km or more / all departures; threshold and scope (all services or scheduled passenger) are parameters.
 - Expansion screening score: four components on fixed ranges, weights 35/30/20/15 (growth, occupancy, delays, supply gap). Missing component = not scored; no silent re-weighting.
+- Flight growth (departures performed, cargo included) is reported next to passenger and seat growth but is not scored: seats already measure the flight capacity airlines add (flights times aircraft size), so scoring flights as well would count capacity twice.
 
 - Demand pressure (the "unmet demand" question): four signals. Planes are full = load factor above the national load factor for the same 12 months (all US airports in the BTS data); demand outpacing supply = supply gap above 0; operations strained = delay rate 25% or more, or NAS share above 40%; a documented constraint exists. 0-1 signals low, 2 moderate, 3-4 high.
 
@@ -66,13 +69,20 @@ Every tool returns the same evidence envelope (period, sources with retrieval ti
 
 ## 6. Interface and voice
 
-One page. The empty state offers the four exam questions. Each answer shows the tools the agent ran (a short trail), the answer text, then a card per result: ranking with score components, congestion table with delay causes, long-haul ring with threshold and scope controls, demand-pressure signals with the monthly load factor against the national line, traffic table, and live FAA and weather. Every card ends with its evidence: period, confidence, sources (live API, daily API, official file or curated) with retrieval time, assumptions and warnings. Controls on a card do not recalculate in the browser; they send a follow-up, so the tool recomputes and the evidence stays true.
+One page. The empty state offers the four exam questions. Each answer shows the tools the agent ran (a short trail), the direct answer, a card per result, then the explanation. The cards are: ranking with score components, congestion table with delay causes, long-haul ring with threshold and scope controls, demand-pressure signals with the monthly load factor against the national line, traffic table, and live FAA and weather. Every card ends with its evidence: period, confidence, sources (live API, daily API, official file or curated) with retrieval time, assumptions and warnings. Controls on a card do not recalculate in the browser; they send a follow-up, so the tool recomputes and the evidence stays true.
 
 Voice uses the browser: speech recognition to ask (Chrome, Edge, Safari; hidden where unsupported) and speech synthesis to read the first paragraph of the answer when the question was spoken. No audio reaches our servers. A server transcription fallback was planned only if browser voice fell short.
 
 Look: the Horizon palette (midnight, indigo, sky), Public Sans (the US government's design-system typeface, fitting for federal data), the gradient kept to the logo, the send button and the long-haul ring. Light and dark follow the system setting.
 
-## 7. Tradeoffs and decisions
+## 7. Testing
+
+- **Unit tests** (92): every formula and the score in `packages/core`, the CSV, BTS and import mappers, the FAA and METAR parsers (including NOTAM validity windows), alias and region resolution, the provenance check, and the web app's number formatting. CI runs them with the typecheck and a production build of the web app.
+- **Evaluation** (`npm run eval`): the four exam questions, three follow-ups and an out-of-scope question against the real data and model; a turn fails on a missing tool or argument, or on any number in the answer that no tool returned. 8 of 8 pass.
+- **Sanity check** (`npm run smoke`): after a change or a deploy, checks the API is up, the data is loaded, CORS admits the web app, bad requests are refused, and each exam question runs its tool end to end. It takes about two minutes and costs four model calls.
+- **Browser pass**: all questions, follow-ups and card controls run in Chrome at desktop and phone width, in light and dark. It found and fixed an FAA closure misread as expired (the feed's own dates have no year; the NOTAM's validity window is now parsed), internal names leaking into answers, chart colors too close in dark mode and a ranking row that hid passenger counts.
+
+## 8. Tradeoffs and decisions
 
 | Decision | Why | Alternative |
 | --- | --- | --- |
@@ -84,3 +94,5 @@ Look: the Horizon palette (midnight, indigo, sky), Public Sans (the US governmen
 | Browser voice first | Free and no backend; server transcription only if browser voice falls short | |
 | Fixed score ranges | A score does not change when other airports are added | Min-max within the group |
 | "Planes are full" vs national load factor | A measured benchmark for the same months instead of a fixed 85% | Percentile scoring of every component against all US airports: more statistical, harder to explain |
+| Route rows pre-summed in SQL | A busy airport has tens of thousands of carrier, aircraft and month rows; the long-haul math needs only totals per destination | All aggregation in TypeScript: simpler, but slow over the HTTP driver |
+| Per-instance rate limit | No extra infrastructure for a demo; the Anthropic spend limit is the hard cap | A shared limit (WAF or a Redis counter) for production |

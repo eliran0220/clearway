@@ -28,7 +28,9 @@ export function LoadFactorLine({ months, benchmark, height = 64 }: { months: Mon
       </svg>
       <figcaption className="mt-1 flex justify-between text-xs text-muted">
         <span>{monthLabel(first)}</span>
-        {benchmark != null && <span>dashed: national {benchmark}%</span>}
+        <span>
+          {low}% to {peak}%{benchmark != null && <>, dashed: national {benchmark}%</>}
+        </span>
         <span>{monthLabel(last)}</span>
       </figcaption>
     </figure>

@@ -77,6 +77,21 @@ describe('growth and load factor', () => {
     expect(s.loadFactor).toBeCloseTo(900 / 1050, 10);
   });
 
+  it('computes flight growth from departures, and leaves it unavailable without them', () => {
+    const w1 = monthsEnding('2026-04', 12);
+    const w0 = monthsEnding('2025-04', 12);
+    const rows: TrafficRow[] = [
+      ...w0.map((month) => ({ month, passengers: 800, seats: 1000, departures: 10 })),
+      ...w1.map((month) => ({ month, passengers: 900, seats: 1050, departures: 11 })),
+    ];
+    const s = trafficSummary(rows, w1, w0);
+    expect(s.departuresW1).toBe(132);
+    expect(s.flightGrowth).toBeCloseTo(0.1, 10); // 11/10 - 1
+    const noDepartures = trafficSummary(rows.map(({ departures, ...r }) => r), w1, w0);
+    expect(noDepartures.flightGrowth).toBeNull();
+    expect(noDepartures.passengerGrowth).toBeCloseTo(0.125, 10);
+  });
+
   it('marks a window with a missing month as unavailable', () => {
     const w1 = monthsEnding('2026-04', 12);
     const w0 = monthsEnding('2025-04', 12);

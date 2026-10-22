@@ -1,5 +1,6 @@
-// Read-only queries used by the agent tools. Simple, parameterized selects only:
-// aggregation happens in @clearway/core so it is unit-tested and identical everywhere.
+// Read-only queries used by the agent tools. Simple, parameterized selects: the metrics themselves
+// (rates, shares, growth) are computed in @clearway/core so they are unit-tested and identical
+// everywhere. SQL only pre-sums plain counts where the row volume would otherwise be large.
 import { and, asc, between, desc, eq, ilike, inArray, like, max, or, sql } from 'drizzle-orm';
 import {
   airportConstraints,
@@ -73,19 +74,33 @@ export async function delayRows(db: Db, codes: string[], from: string, to: strin
   return rows.map((r) => ({ ...r, month: toMonth(r.month) }));
 }
 
+/**
+ * Departures from one airport over a period, summed in SQL per destination, distance and service
+ * class: a busy airport has tens of thousands of carrier x aircraft x month rows, and the long-haul
+ * math only needs these totals. Grouping by "has seats" keeps the passenger-service test exact
+ * (class F with seats on the row itself).
+ */
 export async function segmentsFrom(db: Db, origin: string, from: string, to: string) {
-  return db
+  const s = routeSegmentsMonthly;
+  const rows = await db
     .select({
-      dest: routeSegmentsMonthly.dest,
-      destCountry: routeSegmentsMonthly.destCountry,
-      distanceMi: routeSegmentsMonthly.distanceMi,
-      departures: routeSegmentsMonthly.departuresPerformed,
-      seats: routeSegmentsMonthly.seats,
-      passengers: routeSegmentsMonthly.passengers,
-      serviceClass: routeSegmentsMonthly.serviceClass,
+      dest: s.dest,
+      destCountry: s.destCountry,
+      distanceMi: s.distanceMi,
+      serviceClass: s.serviceClass,
+      departures: sql<number>`coalesce(sum(${s.departuresPerformed}), 0)::float8`,
+      seats: sql<number | null>`sum(${s.seats})::float8`,
+      passengers: sql<number | null>`sum(${s.passengers})::float8`,
     })
-    .from(routeSegmentsMonthly)
-    .where(and(eq(routeSegmentsMonthly.origin, origin), between(routeSegmentsMonthly.month, toDate(from), toDate(to))));
+    .from(s)
+    .where(and(eq(s.origin, origin), between(s.month, toDate(from), toDate(to))))
+    .groupBy(s.dest, s.destCountry, s.distanceMi, s.serviceClass, sql`(${s.seats} > 0)`);
+  return rows.map((r) => ({
+    ...r,
+    departures: Number(r.departures),
+    seats: r.seats == null ? null : Number(r.seats),
+    passengers: r.passengers == null ? null : Number(r.passengers),
+  }));
 }
 
 export async function airportsByCodes(db: Db, codes: string[]) {

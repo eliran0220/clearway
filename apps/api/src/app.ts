@@ -4,7 +4,7 @@ import { convertToModelMessages, createUIMessageStreamResponse, streamText, toUI
 import { METHODOLOGY_VERSION } from '@clearway/core';
 import { getDb, model, stopAfterMaxSteps, systemPrompt, tools, uiWithoutReasoning } from './agent/agent';
 import { latestDelayMonth, latestSegmentMonth, latestTrafficMonth } from './data/repo';
-import { allowRequest } from './rate-limit';
+import { allowRequest, RATE_LIMIT } from './rate-limit';
 
 // CORS is handled here only. The Lambda Function URL has CORS turned off (sst.config.ts),
 // because setting it in both places sends duplicate headers and browsers reject them.
@@ -72,7 +72,9 @@ function clientIp(c: Context): string {
 
 app.post('/chat', async (c) => {
   const ip = clientIp(c);
-  if (!allowRequest(ip)) return c.json({ error: 'Too many questions in a short time. Please wait a few minutes.' }, 429);
+  if (!allowRequest(ip)) {
+    return c.json({ error: `You've asked ${RATE_LIMIT.maxRequests} questions in ${RATE_LIMIT.windowMinutes} minutes, the limit for this demo. Wait a few minutes and ask again.` }, 429);
+  }
 
   let body: { messages?: UIMessage[] };
   try {

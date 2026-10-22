@@ -213,8 +213,9 @@ export async function importConstraints(db: Db, file: string, log: Log = console
   const rows = validateConstraints(JSON.parse(await readFile(file, 'utf8')));
   const fetchId = await startFetch(db, 'curated-constraints', basename(file), [], rows.length);
   try {
-    await db.delete(airportConstraints);
-    if (rows.length) await db.insert(airportConstraints).values(rows);
+    // One transaction (the HTTP driver runs a batch atomically), so a failed insert never leaves the table empty.
+    if (rows.length) await db.batch([db.delete(airportConstraints), db.insert(airportConstraints).values(rows)]);
+    else await db.delete(airportConstraints);
     await finishFetch(db, fetchId, 'ok');
   } catch (err) {
     await finishFetch(db, fetchId, 'error', err instanceof Error ? err.message : String(err));

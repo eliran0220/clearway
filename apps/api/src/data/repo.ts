@@ -1,7 +1,7 @@
 // Read-only queries used by the agent tools. Simple, parameterized selects: the metrics themselves
 // (rates, shares, growth) are computed in @clearway/core so they are unit-tested and identical
 // everywhere. SQL only pre-sums plain counts where the row volume would otherwise be large.
-import { and, asc, between, desc, eq, ilike, inArray, like, max, or, sql } from 'drizzle-orm';
+import { and, asc, between, desc, eq, ilike, inArray, like, max, min, or, sql } from 'drizzle-orm';
 import {
   airportConstraints,
   airportDelaysMonthly,
@@ -20,6 +20,15 @@ export const toMonth = (date: string) => date.slice(0, 7);
 export async function latestTrafficMonth(db: Db): Promise<string | null> {
   const [row] = await db.select({ m: max(airportTrafficMonthly.month) }).from(airportTrafficMonthly);
   return row?.m ? toMonth(row.m) : null;
+}
+
+/** First month each source holds, to say so when a requested window starts before it. */
+export async function earliestMonths(db: Db): Promise<{ traffic: string | null; delays: string | null }> {
+  const [[t], [d]] = await Promise.all([
+    db.select({ m: min(airportTrafficMonthly.month) }).from(airportTrafficMonthly),
+    db.select({ m: min(airportDelaysMonthly.month) }).from(airportDelaysMonthly),
+  ]);
+  return { traffic: t?.m ? toMonth(t.m) : null, delays: d?.m ? toMonth(d.m) : null };
 }
 
 export async function latestDelayMonth(db: Db): Promise<string | null> {

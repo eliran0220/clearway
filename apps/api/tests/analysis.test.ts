@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  beforeDataWarning,
   busiestFirst,
   chooseEnd,
   delayCauseShares,
@@ -170,6 +171,12 @@ describe('edge cases found in the bug hunt', () => {
     expect(names('LA and Santa Ana')).toEqual([]);
     expect(names('Washington, DC and Boston')).toEqual([]);
     expect(names('SFO, OAK')).toEqual([]);
+  });
+
+  it('says the data starts later when a window begins before it, instead of calling it a gap', () => {
+    expect(beforeDataWarning('2018-01', '2023-01', 'traffic')).toContain('starts in 2023-01');
+    expect(beforeDataWarning('2024-05', '2023-01', 'traffic')).toBeNull();
+    expect(beforeDataWarning('2018-01', null, 'traffic')).toBeNull();
   });
 
   it('puts the busiest of several matching airports first', () => {

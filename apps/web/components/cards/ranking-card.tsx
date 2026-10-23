@@ -22,7 +22,8 @@ const rawText = (raw: { value: number | null; unit: string }) =>
 export function RankingCard({ envelope }: { envelope: Envelope<RankingData> }) {
   const d = envelope.data;
   const [open, setOpen] = useState<string | null>(d.ranked[0]?.airport ?? null);
-  const [showExcluded, setShowExcluded] = useState(false);
+  // With nothing ranked, the reasons are the whole answer, so they start open.
+  const [showExcluded, setShowExcluded] = useState(d.ranked.length === 0);
   const firstComponents = d.ranked[0]?.components ?? [];
   const isScenario = d.scenario !== 'default';
   const belowThreshold = d.notRanked.filter((n) => n.status === 'ineligible');
@@ -42,6 +43,8 @@ export function RankingCard({ envelope }: { envelope: Envelope<RankingData> }) {
           </li>
         ))}
       </ul>
+
+      {d.ranked.length === 0 && <p className="text-sm text-muted">No airport in this selection could be scored; the reasons are below.</p>}
 
       {/* The list bleeds by the rows' border and padding (13 px), so rank and score sit on the card's content edges. */}
       <ol className="-mx-[13px] space-y-1.5">

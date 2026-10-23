@@ -201,6 +201,15 @@ export function chooseEnd(latestPerSource: (string | null)[], requested?: string
   return { end: requested };
 }
 
+/**
+ * A warning when a window starts before the first month a source holds ("SFO traffic in 2019"),
+ * so the answer says the data starts later instead of calling it a gap.
+ */
+export function beforeDataWarning(windowStart: string, earliest: string | null, source: string): string | null {
+  if (!earliest || windowStart >= earliest) return null;
+  return `Clearway's ${source} data starts in ${earliest}; the window from ${windowStart} begins before that, so those months are unavailable (not zero).`;
+}
+
 // ---------- distance bands ----------
 
 export interface Band {

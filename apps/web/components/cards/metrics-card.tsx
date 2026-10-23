@@ -4,7 +4,7 @@ import { Card } from '../card';
 
 // The three growth columns share one header, so each column's own label stays short enough to fit.
 const GROWTH = ['Passengers', 'Flights', 'Seats'];
-const single = 'whitespace-nowrap pb-2 pl-3 text-right align-bottom font-medium';
+const single = 'whitespace-nowrap pb-2 pl-2 text-right align-bottom font-medium';
 
 const DECIMAL_COLUMNS = ['passengerGrowthPct', 'flightGrowthPct', 'seatGrowthPct', 'supplyGapPts', 'loadFactorPct'] as const;
 
@@ -15,7 +15,8 @@ export function MetricsCard({ envelope }: { envelope: Envelope<MetricsData> }) {
   return (
     <Card title={`Traffic: ${listOf(d.airports.map((a) => a.airport))}`} envelope={envelope}>
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[36rem] table-fixed text-sm">
+        {/* Wide enough that every header (about 65 px) fits its column; on a phone the table scrolls sideways. */}
+        <table className="w-full min-w-[42rem] table-fixed text-sm">
           <colgroup>
             <col className="w-[32%]" />
             {Array.from({ length: 6 }, (_, i) => (
@@ -30,7 +31,7 @@ export function MetricsCard({ envelope }: { envelope: Envelope<MetricsData> }) {
               <th rowSpan={2} scope="col" className={single}>
                 Passengers
               </th>
-              <th colSpan={3} scope="colgroup" className="pb-1 pl-3 text-center font-medium">
+              <th colSpan={3} scope="colgroup" className="pb-1 pl-2 text-center font-medium">
                 <span className="block border-b border-line pb-1">Growth, year over year</span>
               </th>
               <th rowSpan={2} scope="col" className={single}>
@@ -57,12 +58,12 @@ export function MetricsCard({ envelope }: { envelope: Envelope<MetricsData> }) {
                     {a.name ?? ''}
                   </span>
                 </td>
-                <td className="py-2 pl-3 text-right">{compact(a.passengers12m)}</td>
-                <td className="py-2 pl-3 text-right">{signedPct(a.passengerGrowthPct, dec.passengerGrowthPct)}</td>
-                <td className="py-2 pl-3 text-right">{signedPct(a.flightGrowthPct, dec.flightGrowthPct)}</td>
-                <td className="py-2 pl-3 text-right">{signedPct(a.seatGrowthPct, dec.seatGrowthPct)}</td>
-                <td className="py-2 pl-3 text-right">{pts(a.supplyGapPts, dec.supplyGapPts)}</td>
-                <td className="py-2 pl-3 text-right">{pct(a.loadFactorPct, dec.loadFactorPct)}</td>
+                <td className="py-2 pl-2 text-right">{compact(a.passengers12m)}</td>
+                <td className="py-2 pl-2 text-right">{signedPct(a.passengerGrowthPct, dec.passengerGrowthPct)}</td>
+                <td className="py-2 pl-2 text-right">{signedPct(a.flightGrowthPct, dec.flightGrowthPct)}</td>
+                <td className="py-2 pl-2 text-right">{signedPct(a.seatGrowthPct, dec.seatGrowthPct)}</td>
+                <td className="py-2 pl-2 text-right">{pts(a.supplyGapPts, dec.supplyGapPts)}</td>
+                <td className="py-2 pl-2 text-right">{pct(a.loadFactorPct, dec.loadFactorPct)}</td>
               </tr>
             ))}
           </tbody>

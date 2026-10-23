@@ -22,6 +22,7 @@ import type { Db } from '@clearway/db';
 import * as repo from '../data/repo';
 import { SOURCES, type SourceId } from '../data/sources';
 import {
+  beforeDataWarning,
   busiestFirst,
   byAirport,
   chooseEnd,
@@ -74,7 +75,15 @@ async function trafficAndDelayWindow(db: Db, endMonth?: string) {
   const [traffic, delays] = await Promise.all([repo.latestTrafficMonth(db), repo.latestDelayMonth(db)]);
   const { end, warning } = chooseEnd([traffic, delays], endMonth);
   if (!end) throw new Error('Traffic or delay data is not loaded yet.');
-  return { win: windowsEndingAt(end), warning };
+  const win = windowsEndingAt(end);
+  // Only an explicitly chosen (earlier) window can start before the data does.
+  const early = endMonth ? await repo.earliestMonths(db) : null;
+  const notes = [
+    warning,
+    early && beforeDataWarning(win.w0[0] as string, early.traffic, 'traffic'),
+    early && beforeDataWarning(win.w1[0] as string, early.delays, 'delay'),
+  ].filter((w): w is string => Boolean(w));
+  return { win, warning: notes.length ? notes.join(' ') : undefined };
 }
 
 function monthlyLoadFactor(rows: { month: string; passengers: number | null; seats: number | null }[], months: string[]) {
@@ -179,12 +188,14 @@ export function createTools(getDb: () => Db) {
           repo.nationalTraffic(db, win.w1[0] as string, end),
           sourcesFor(db, ['bts-monthly-api']),
         ]);
-        const warnings = [...(warning ? [warning] : []), ...foreignAirportWarnings(names, codes)];
+        const early = endMonth ? beforeDataWarning(win.w0[0] as string, (await repo.earliestMonths(db)).traffic, 'traffic') : null;
+        const warnings = [...(warning ? [warning] : []), ...(early ? [early] : []), ...foreignAirportWarnings(names, codes)];
         const rowsByAirport = byAirport(rows);
         const data = codes.map((code) => {
           const own = rowsByAirport.get(code) ?? [];
           const s = trafficSummary(own, win.w1, win.w0);
-          if (s.passengersW1 == null || s.passengersW0 == null) warnings.push(`${code}: some months are missing in the window, so growth is unavailable.`);
+          if (own.length === 0) warnings.push(`${code}: no traffic data in the window.`);
+          else if (s.passengersW1 == null || s.passengersW0 == null) warnings.push(`${code}: some months are missing in the window, so growth is unavailable.`);
           return {
             airport: code,
             name: nameOf(names, code),

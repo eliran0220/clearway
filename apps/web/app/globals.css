@@ -85,21 +85,24 @@ body {
   color: var(--cw-ink);
 }
 
-/* Reserve the scrollbar's width on both sides, so the column stays centered with or without a scrollbar. */
+/* Always keep the scrollbar's place, so the centered column does not jump when an answer makes the page scroll. */
 html {
-  scrollbar-gutter: stable both-edges;
+  overflow-y: scroll;
 }
 
 body {
   font-family: var(--font-public-sans), system-ui, sans-serif;
-  font-feature-settings: 'tnum' 1;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-:focus-visible {
-  outline: 2px solid var(--cw-brand-2);
-  outline-offset: 2px;
-  border-radius: 6px;
+/* In the base layer, so a component can opt out (the question box shows focus on its frame instead). */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--cw-brand-2);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
 }
 
 /* The horizon gradient: only on the logo mark, the send button and the long-haul ring. */
@@ -136,11 +139,14 @@ body {
 .md p { margin: 0 0 0.75em; }
 .md p:last-child { margin-bottom: 0; }
 .md strong { font-weight: 600; }
-.md ul, .md ol { margin: 0 0 0.75em; padding-left: 1.25em; }
-.md ul { list-style: disc; }
+.md ul, .md ol { margin: 0 0 0.75em; padding-left: 1.1em; }
 .md ol { list-style: decimal; }
 .md li { margin: 0.2em 0; }
-.md li::marker { color: var(--cw-muted); }
+.md ol > li::marker { color: var(--cw-muted); }
+/* Bullets drawn by hand so the dot's left edge sits exactly on the paragraph edge. */
+.md ul { list-style: none; }
+.md ul > li { position: relative; }
+.md ul > li::before { content: ''; position: absolute; left: -1.1em; top: calc(0.825em - 2.5px); width: 5px; height: 5px; border-radius: 50%; background: var(--cw-muted); }
 .md a { color: var(--cw-brand-2); text-decoration: underline; text-underline-offset: 2px; }
 .md h1, .md h2, .md h3 { font-size: 15px; font-weight: 600; margin: 1em 0 0.4em; }
 .md table { border-collapse: collapse; margin: 0.25em 0 0.9em; font-size: 14px; display: block; overflow-x: auto; max-width: 100%; }

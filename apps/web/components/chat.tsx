@@ -214,7 +214,7 @@ export function Chat() {
               </button>
             </div>
           )}
-          <form onSubmit={onSubmit} className="flex items-end gap-2 rounded-2xl border border-line bg-surface p-2 pl-4 shadow-sm focus-within:border-brand-2/50">
+          <form onSubmit={onSubmit} className="flex items-end gap-2 rounded-2xl border border-line bg-surface p-2 pl-4 shadow-sm focus-within:border-brand-2 focus-within:ring-4 focus-within:ring-brand-2/10">
             <label htmlFor="question" className="sr-only">
               Ask a question
             </label>

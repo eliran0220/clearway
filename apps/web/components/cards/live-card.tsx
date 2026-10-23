@@ -12,11 +12,13 @@ const FLIGHT_CATEGORY: Record<string, string> = {
 
 /** The closure's validity, read from the NOTAM itself (the feed's own start and reopen times carry no year). */
 function closureWindow(e: FaaEvent): string {
-  if (e.permanent) return `: permanent, since ${dayLabel(e.validFrom)}`;
+  // Non-breaking spaces keep each date on one line.
+  const day = (iso: string | null | undefined) => dayLabel(iso).replace(/ /g, '\u00a0');
+  if (e.permanent) return `: permanent, since ${day(e.validFrom)}`;
   if (!e.validFrom || !e.validTo) return '';
-  if (e.inForceNow === true) return `: in force until ${dayLabel(e.validTo)}`;
-  if (e.inForceNow === false) return `: not in force now (${dayLabel(e.validFrom)} to ${dayLabel(e.validTo)})`;
-  return `: ${dayLabel(e.validFrom)} to ${dayLabel(e.validTo)}`;
+  if (e.inForceNow === true) return `: in force until ${day(e.validTo)}`;
+  if (e.inForceNow === false) return `: not in force now (${day(e.validFrom)} to ${day(e.validTo)})`;
+  return `: ${day(e.validFrom)} to ${day(e.validTo)}`;
 }
 
 export function LiveCard({ envelope }: { envelope: Envelope<LiveData> }) {
@@ -48,7 +50,7 @@ export function LiveCard({ envelope }: { envelope: Envelope<LiveData> }) {
                       </p>
                       <details className="mt-0.5">
                         <summary className="cursor-pointer text-xs text-muted hover:text-ink">NOTAM text</summary>
-                        <p className="mt-1 font-mono text-[11px] leading-snug break-words text-muted">{e.notamText}</p>
+                        <p className="mt-1 font-mono text-xs leading-snug break-words text-muted">{e.notamText}</p>
                       </details>
                     </div>
                   ) : (

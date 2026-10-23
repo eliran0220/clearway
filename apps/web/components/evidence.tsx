@@ -62,7 +62,7 @@ export function Evidence({ envelope }: { envelope: Envelope<unknown> }) {
               {envelope.sources.map((s) => (
                 <li key={s.id} className="flex flex-col gap-0.5">
                   <span className="flex items-start gap-2">
-                    <span className={`shrink-0 rounded px-1.5 py-0.5 text-[11px] font-semibold ${KIND_STYLE[s.kind]}`}>{KIND_LABEL[s.kind]}</span>
+                    <span className={`shrink-0 rounded px-1.5 py-0.5 text-xs font-semibold ${KIND_STYLE[s.kind]}`}>{KIND_LABEL[s.kind]}</span>
                     {s.url ? (
                       <a href={s.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 underline-offset-2 hover:underline">
                         {s.label}

@@ -22,12 +22,19 @@ export function CongestionCard({ envelope }: { envelope: Envelope<CongestionData
   return (
     <Card title={`Congestion: ${d.airports.map((a) => a.airport).join(' and ')}`} envelope={envelope}>
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[22rem] text-sm">
+        {/* Both tables in this card share these columns, so each airport's numbers line up from top to bottom. */}
+        <table className="w-full min-w-[22rem] table-fixed text-sm">
+          <colgroup>
+            <col />
+            {d.airports.map((a) => (
+              <col key={a.airport} className="w-24" />
+            ))}
+          </colgroup>
           <thead>
-            <tr className="text-left text-xs text-muted">
-              <th className="pb-2 pr-3 font-medium">Same 12 months</th>
+            <tr className="text-xs text-muted">
+              <th className="pb-2 pr-3 text-left font-medium">Same 12 months</th>
               {d.airports.map((a) => (
-                <th key={a.airport} className="pb-2 pr-3 font-semibold text-ink">
+                <th key={a.airport} className="pb-2 pl-3 text-right font-semibold text-ink">
                   {a.airport}
                 </th>
               ))}
@@ -37,24 +44,25 @@ export function CongestionCard({ envelope }: { envelope: Envelope<CongestionData
             {METRICS.map((m) => {
               const shown = alignedPcts(d.airports.map((a) => a[m.key]));
               return (
-              <tr key={m.key} className="border-t border-line">
-                <td className="py-2 pr-3 text-muted">{m.label}</td>
-                {d.airports.map((a, i) => {
-                  const higher = d.higherOn[m.key] === a.airport;
-                  return (
-                    <td key={a.airport} className="py-2 pr-3 tabular-nums">
-                      <span className={higher ? 'rounded-md bg-watch-bg px-1.5 py-0.5 font-semibold text-watch' : ''}>{shown[i]}</span>
-                      {higher && <span className="sr-only"> (higher)</span>}
-                    </td>
-                  );
-                })}
-              </tr>
+                <tr key={m.key} className="border-t border-line">
+                  <td className="py-2 pr-3 text-muted">{m.label}</td>
+                  {d.airports.map((a, i) => {
+                    const higher = d.higherOn[m.key] === a.airport;
+                    return (
+                      <td key={a.airport} className="py-2 pl-3 text-right">
+                        {/* The highlight bleeds by its own padding, so highlighted numbers stay in line with the rest. */}
+                        <span className={higher ? '-mx-1.5 rounded-md bg-watch-bg px-1.5 py-0.5 font-semibold text-watch' : ''}>{shown[i]}</span>
+                        {higher && <span className="sr-only"> (higher)</span>}
+                      </td>
+                    );
+                  })}
+                </tr>
               );
             })}
             <tr className="border-t border-line">
               <td className="py-2 pr-3 text-muted">Arrivals counted</td>
               {d.airports.map((a) => (
-                <td key={a.airport} className="py-2 pr-3">
+                <td key={a.airport} className="py-2 pl-3 text-right">
                   {int(a.arrivals)}
                 </td>
               ))}
@@ -79,12 +87,18 @@ export function CongestionCard({ envelope }: { envelope: Envelope<CongestionData
         </div>
         {/* The legend doubles as the values table, so no number lives only in a color. */}
         <div className="mt-3 overflow-x-auto">
-          <table className="w-full min-w-[18rem] text-xs">
+          <table className="w-full min-w-[22rem] table-fixed text-xs">
+            <colgroup>
+              <col />
+              {d.airports.map((a) => (
+                <col key={a.airport} className="w-24" />
+              ))}
+            </colgroup>
             <thead>
-              <tr className="text-left">
-                <th className="pb-1 pr-3 font-medium text-muted">Share of delay minutes</th>
+              <tr>
+                <th className="pb-1 pr-3 text-left font-medium text-muted">Share of delay minutes</th>
                 {d.airports.map((a) => (
-                  <th key={a.airport} className="pb-1 pr-3 font-semibold">
+                  <th key={a.airport} className="pb-1 pl-3 text-right font-semibold">
                     {a.airport}
                   </th>
                 ))}
@@ -102,7 +116,7 @@ export function CongestionCard({ envelope }: { envelope: Envelope<CongestionData
                       </span>
                     </td>
                     {d.airports.map((a, i) => (
-                      <td key={a.airport} className="w-24 py-0.5 pr-3 tabular-nums">
+                      <td key={a.airport} className="py-0.5 pl-3 text-right">
                         {shown[i]}
                       </td>
                     ))}

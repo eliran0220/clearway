@@ -35,7 +35,8 @@ export function PressureCard({ envelope }: { envelope: Envelope<PressureData> })
         ))}
       </ul>
 
-      <div className="mt-4 flex flex-wrap items-end gap-6">
+      {/* Same two columns and gap as the signals above, so the stats start exactly under the right-hand signals. */}
+      <div className="mt-4 grid items-end gap-x-2 gap-y-4 sm:grid-cols-2">
         <LoadFactorLine months={d.monthlyLoadFactorPct} benchmark={m.nationalLoadFactorPct} />
         <dl className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
           <dt className="text-muted">Passengers, 12 months</dt>

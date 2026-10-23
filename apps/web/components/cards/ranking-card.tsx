@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import type { Envelope, RankingData } from '@/lib/types';
-import { compact } from '@/lib/format';
+import { compact, num } from '@/lib/format';
 import { Card } from '../card';
 
 /** One chart color per score component; they differ in lightness as well as hue in both themes. */
@@ -17,7 +17,7 @@ export const COMPONENT_COLOR: Record<string, string> = {
 const score1 = (n: number) => n.toFixed(1);
 
 const rawText = (raw: { value: number | null; unit: string }) =>
-  raw.value == null ? 'n/a' : raw.unit === 'pts' ? `${raw.value > 0 ? '+' : ''}${raw.value} pts` : `${raw.value}%`;
+  raw.value == null ? 'n/a' : raw.unit === 'pts' ? `${raw.value > 0 ? '+' : ''}${num(raw.value)} pts` : `${num(raw.value)}%`;
 
 export function RankingCard({ envelope }: { envelope: Envelope<RankingData> }) {
   const d = envelope.data;
@@ -43,7 +43,8 @@ export function RankingCard({ envelope }: { envelope: Envelope<RankingData> }) {
         ))}
       </ul>
 
-      <ol className="space-y-1.5">
+      {/* The list bleeds by the rows' border and padding (13 px), so rank and score sit on the card's content edges. */}
+      <ol className="-mx-[13px] space-y-1.5">
         {d.ranked.map((r) => {
           const expanded = open === r.airport;
           return (
@@ -77,7 +78,7 @@ export function RankingCard({ envelope }: { envelope: Envelope<RankingData> }) {
                 <span className="text-right text-base font-bold tabular-nums">{score1(r.score)}</span>
               </button>
               {expanded && (
-                <div className="mt-1.5 grid grid-cols-2 gap-2 px-1 pb-1 sm:grid-cols-4">
+                <div className="mx-[13px] mt-1.5 grid grid-cols-2 gap-2 pb-1 sm:grid-cols-4">
                   {r.components.map((c) => (
                     <div key={c.key} className="rounded-lg border border-line px-3 py-2">
                       <div className="flex items-center gap-1.5 text-xs text-muted">

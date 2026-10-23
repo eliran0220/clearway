@@ -24,7 +24,10 @@ export function compact(n: number | null | undefined): string {
   return String(Math.round(n));
 }
 
-export const pct = (n: number | null | undefined) => (n == null ? 'n/a' : `${n}%`);
+/** Numbers for display, with a true minus sign (−) rather than a hyphen for negatives. */
+export const num = (n: number) => String(n).replace('-', '\u2212');
+
+export const pct = (n: number | null | undefined) => (n == null ? 'n/a' : `${num(n)}%`);
 /** Formats a column of percentages with the same number of decimals, so 18 sits as 18.0% beside 19.3%. */
 export function alignedPcts(values: (number | null | undefined)[]): string[] {
   const decimals = (n: number) => (String(n).split('.')[1] ?? '').length;
@@ -41,8 +44,8 @@ export function dayLabel(iso: string | null | undefined): string {
   return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
 }
 
-export const signedPct = (n: number | null | undefined) => (n == null ? 'n/a' : `${n > 0 ? '+' : ''}${n}%`);
-export const pts = (n: number | null | undefined) => (n == null ? 'n/a' : `${n > 0 ? '+' : ''}${n} pts`);
+export const signedPct = (n: number | null | undefined) => (n == null ? 'n/a' : `${n > 0 ? '+' : ''}${num(n)}%`);
+export const pts = (n: number | null | undefined) => (n == null ? 'n/a' : `${n > 0 ? '+' : ''}${num(n)} pts`);
 
 export function timeAgo(iso: string | null | undefined): string {
   if (!iso) return '';

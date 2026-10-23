@@ -85,6 +85,11 @@ body {
   color: var(--cw-ink);
 }
 
+/* Keep the scrollbar's space reserved, so the centered column does not shift when a long answer makes the page scroll. */
+html {
+  scrollbar-gutter: stable;
+}
+
 body {
   font-family: var(--font-public-sans), system-ui, sans-serif;
   font-feature-settings: 'tnum' 1;

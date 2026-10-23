@@ -39,6 +39,8 @@ import { inForceAt, type FaaStatus, type Metar } from './feeds';
 import { cachedFetch, fetchFaaStatus, fetchMetars } from './live';
 
 const pct = (x: number | null | undefined) => (x == null ? null : Math.round(x * 1000) / 10);
+/** Long-haul thresholds the web card offers as buttons (km). */
+const LONG_HAUL_THRESHOLDS_KM = [3000, 4000, 5000];
 const pts = (x: number | null | undefined) => (x == null ? null : Math.round(x * 1000) / 10); // fraction -> percentage points
 const monthSchema = z.string().regex(/^\d{4}-\d{2}$/).describe('Last month of the 12-month window, YYYY-MM. Omit for the latest available.');
 const codesSchema = z.array(z.string()).min(1).max(10).describe('3-letter IATA airport codes, e.g. ["LAX", "SNA"]');
@@ -426,6 +428,8 @@ export function createTools(getDb: () => Db) {
             airport: code,
             name: nameOf(names, code),
             thresholdKm: threshold,
+            // The thresholds the card offers as one-click re-runs, so a suggestion quotes a value the tool gave.
+            otherThresholdsKm: LONG_HAUL_THRESHOLDS_KM.filter((t) => t !== threshold),
             thresholdMi: chosen.thresholdMi,
             scope: chosenScope,
             longHaulSharePct: pct(chosen.share),

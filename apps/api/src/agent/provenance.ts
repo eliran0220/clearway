@@ -11,8 +11,12 @@ export function normalizeNumber(raw: string): string {
   return n;
 }
 
+/** Names that contain a number but are not data: "the Lower 48" is a place. */
+const NOT_DATA = [/\blower 48\b/gi];
+
 export function numbersIn(text: string): string[] {
-  return (text.match(NUMBER) ?? []).map(normalizeNumber);
+  const cleaned = NOT_DATA.reduce((t, re) => t.replace(re, ' '), text);
+  return (cleaned.match(NUMBER) ?? []).map(normalizeNumber);
 }
 
 /** Small counts (list numbering, "12 months"), the score scale ("out of 100") and years are not data claims. */

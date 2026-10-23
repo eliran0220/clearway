@@ -70,6 +70,7 @@ export interface LongHaulData {
   airport: string;
   name: string | null;
   thresholdKm: number;
+  otherThresholdsKm?: number[];
   thresholdMi: number;
   scope: 'all' | 'passenger';
   longHaulSharePct: number | null;

@@ -2,11 +2,14 @@ import type { Envelope, LongHaulData } from '@/lib/types';
 import { int } from '@/lib/format';
 import { Card } from '../card';
 
-const THRESHOLDS = [3000, 4000, 5000];
+/** Used only if the API did not list its thresholds. */
+const DEFAULT_THRESHOLDS = [3000, 4000, 5000];
 
 /** Long-haul share as a ring. The controls ask the agent again, so every change is recomputed by the tool. */
 export function LongHaulCard({ envelope, onAsk, busy }: { envelope: Envelope<LongHaulData>; onAsk: (text: string) => void; busy: boolean }) {
   const d = envelope.data;
+  // The buttons are the current threshold plus the ones the tool offers, so the card and the agent agree.
+  const thresholds = d.otherThresholdsKm ? [...new Set([...d.otherThresholdsKm, d.thresholdKm])].sort((a, b) => a - b) : DEFAULT_THRESHOLDS;
   const share = d.longHaulSharePct ?? 0;
   const deg = (share / 100) * 360;
   const otherScope = d.scope === 'all' ? 'passenger' : 'all';
@@ -15,7 +18,7 @@ export function LongHaulCard({ envelope, onAsk, busy }: { envelope: Envelope<Lon
     <Card title={`Long-haul share: ${d.airport} departures`} envelope={envelope}>
       <div className="mb-4 flex flex-wrap gap-2">
         <div role="group" aria-label="Long-haul threshold" className="flex rounded-lg bg-tint p-0.5">
-          {THRESHOLDS.map((t) => {
+          {thresholds.map((t) => {
             const active = t === d.thresholdKm;
             return (
               <button

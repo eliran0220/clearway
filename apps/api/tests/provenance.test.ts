@@ -44,3 +44,10 @@ describe('dropping replayed reasoning', () => {
     expect(out[0]?.parts?.map((p) => (p as { type: string }).type)).toEqual(['text', 'tool-getLongHaulShare']);
   });
 });
+
+describe('names that contain numbers', () => {
+  it('does not treat "the Lower 48" as a data claim', () => {
+    expect(unsupportedNumbers('US hubs in the Lower 48, 156 departures', [{ departures: 156 }])).toEqual([]);
+    expect(unsupportedNumbers('48 departures', [{ departures: 156 }])).toEqual(['48']);
+  });
+});

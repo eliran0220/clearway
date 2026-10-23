@@ -26,6 +26,18 @@ const FOLLOW_UPS: Record<string, string[]> = {
   getAirportMetrics: ['Rank New England airports for expansion'],
 };
 
+/** The API answers refusals as JSON ({"error": "..."}); show its sentence, not the raw body. */
+function errorText(error: Error): string {
+  const raw = error.message ?? '';
+  try {
+    const body = JSON.parse(raw) as { error?: unknown };
+    if (typeof body?.error === 'string') return body.error;
+  } catch {
+    // not JSON: a network or stream error, shown as it is
+  }
+  return raw || 'The connection to Clearway failed. Check your connection and try again.';
+}
+
 export function Chat() {
   const transport = useMemo(() => new DefaultChatTransport({ api: `${API_URL}/chat` }), []);
   const { messages, sendMessage, status, stop, error, setMessages, regenerate } = useChat({ transport });
@@ -180,8 +192,8 @@ export function Chat() {
             )}
             {error && (
               <div role="alert" className="rounded-xl border border-critical/30 bg-critical-bg px-4 py-3 text-sm text-critical">
-                <p className="font-semibold">The answer did not finish.</p>
-                <p className="mt-0.5">{error.message || 'The connection to the agent failed.'}</p>
+                <p className="font-semibold">Clearway couldn't answer that.</p>
+                <p className="mt-0.5">{errorText(error)}</p>
                 <button type="button" onClick={() => void regenerate()} className="mt-2 rounded-lg border border-critical/40 px-3 py-1 font-medium">
                   Try again
                 </button>
@@ -220,6 +232,7 @@ export function Chat() {
             </label>
             <textarea
               id="question"
+              dir="auto"
               rows={1}
               value={voice.listening ? voice.interim : draft}
               readOnly={voice.listening}

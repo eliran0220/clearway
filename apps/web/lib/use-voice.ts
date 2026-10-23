@@ -93,7 +93,8 @@ export function useVoice(onFinal: (text: string) => void) {
     if (!text || typeof window === 'undefined' || !('speechSynthesis' in window)) return;
     window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
-    u.lang = 'en-US';
+    // Read Hebrew answers with a Hebrew voice; everything else in US English.
+    u.lang = /[\u0590-\u05FF]/.test(text) ? 'he-IL' : 'en-US';
     u.rate = 1.02;
     u.onend = () => setSpeaking(false);
     u.onerror = () => setSpeaking(false);

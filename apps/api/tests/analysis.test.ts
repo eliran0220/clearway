@@ -3,6 +3,7 @@ import {
   chooseEnd,
   delayCauseShares,
   distanceBands,
+  foreignAirportWarnings,
   higherPerMetric,
   matchAliases,
   normalizeCodes,
@@ -122,5 +123,26 @@ describe('delays', () => {
       ['delayRatePct', 'nasSharePct', 'cancelRatePct'],
     );
     expect(higher).toEqual({ delayRatePct: 'LAX', nasSharePct: 'SNA', cancelRatePct: 'tie' });
+  });
+});
+
+describe('edge cases found in the bug hunt', () => {
+  it('does not read "La" in a place name as LA', () => {
+    expect(matchAliases('Compare La Guardia and JFK').codes).toEqual([]);
+    expect(matchAliases('La Crosse traffic').codes).toEqual([]);
+    expect(matchAliases('Compare LA and Santa Ana').codes).toEqual(['LAX', 'SNA']);
+    expect(matchAliases('L.A. vs Los Angeles').codes).toEqual(['LAX']);
+    expect(matchAliases('L.A. vs Los Angeles').assumptions).toHaveLength(1);
+  });
+
+  it('warns that BTS figures for an airport abroad cover only its US flights', () => {
+    const rows = [
+      { iata: 'LHR', region: 'GB-ENG' },
+      { iata: 'SJU', region: 'PR-U-A' },
+      { iata: 'SFO', region: 'US-CA' },
+    ];
+    const w = foreignAirportWarnings(rows, ['LHR', 'SJU', 'SFO', 'XXX']);
+    expect(w).toHaveLength(1);
+    expect(w[0]).toContain('LHR is outside the US');
   });
 });

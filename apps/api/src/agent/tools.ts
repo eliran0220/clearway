@@ -26,6 +26,7 @@ import {
   chooseEnd,
   delayCauseShares,
   distanceBands,
+  foreignAirportWarnings,
   higherPerMetric,
   matchAliases,
   normalizeCodes,
@@ -147,7 +148,7 @@ export function createTools(getDb: () => Db) {
           repo.nationalTraffic(db, win.w1[0] as string, end),
           sourcesFor(db, ['bts-monthly-api']),
         ]);
-        const warnings = warning ? [warning] : [];
+        const warnings = [...(warning ? [warning] : []), ...foreignAirportWarnings(names, codes)];
         const rowsByAirport = byAirport(rows);
         const data = codes.map((code) => {
           const own = rowsByAirport.get(code) ?? [];
@@ -177,7 +178,7 @@ export function createTools(getDb: () => Db) {
           {
             period: win.period,
             sources,
-            confidence: 'high',
+            confidence: foreignAirportWarnings(names, codes).length ? 'low' : 'high',
             warnings,
             assumptions: [
               'Outbound traffic: passengers, seats and flights departing the airport.',
@@ -296,7 +297,7 @@ export function createTools(getDb: () => Db) {
             period: win.period,
             sources,
             confidence: 'medium',
-            warnings: warning ? [warning] : [],
+            warnings: [...(warning ? [warning] : []), ...foreignAirportWarnings(names, codes)],
             assumptions: [
               'A screening score, not an ROI or a feasibility verdict: a high score means worth a terminal-capacity study.',
               'Fixed ranges and weights are illustrative and uncalibrated (see the methodology).',
@@ -444,8 +445,8 @@ export function createTools(getDb: () => Db) {
           {
             period: win.period,
             sources,
-            confidence: chosen.unknownDistanceDepartures > 0 ? 'medium' : 'high',
-            warnings: [...(warning ? [warning] : []), ...chosen.warnings],
+            confidence: foreignAirportWarnings(names, [code]).length ? 'low' : chosen.unknownDistanceDepartures > 0 ? 'medium' : 'high',
+            warnings: [...(warning ? [warning] : []), ...foreignAirportWarnings(names, [code]), ...chosen.warnings],
             assumptions: [
               `Long-haul means ${threshold.toLocaleString('en-US')} km (${chosen.thresholdMi.toLocaleString('en-US')} statute miles) or more: a project definition, not an industry standard.`,
               'Counts departures performed, not routes or destinations.',
@@ -513,8 +514,8 @@ export function createTools(getDb: () => Db) {
           {
             period: win.period,
             sources: [...sources, ...constraintSources(constraints)],
-            confidence: 'medium',
-            warnings: warning ? [warning] : [],
+            confidence: foreignAirportWarnings(names, [code]).length ? 'low' : 'medium',
+            warnings: [...(warning ? [warning] : []), ...foreignAirportWarnings(names, [code])],
             assumptions: [
               'Signals are proxies for demand pressure, not a measurement of unmet demand.',
               'Delay rate counts arrivals 15 or more minutes late (the BTS definition), by reporting carriers.',

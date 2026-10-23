@@ -109,7 +109,7 @@ export function Message({ message, streaming, busy, onAsk, onSpeak }: { message:
   if (message.role === 'user') {
     return (
       <div className="flex justify-end">
-        <p className="max-w-[85%] rounded-2xl rounded-br-md bg-brand-1 px-4 py-2.5 text-[15px] text-white sm:max-w-[75%]">{textOf(message)}</p>
+        <p dir="auto" className="max-w-[85%] rounded-2xl rounded-br-md bg-brand-1 px-4 py-2.5 text-[15px] text-white sm:max-w-[75%]">{textOf(message)}</p>
       </div>
     );
   }

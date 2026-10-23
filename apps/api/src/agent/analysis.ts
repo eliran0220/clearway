@@ -65,9 +65,13 @@ export interface AliasMatch {
   assumptions: string[];
 }
 
+const LA_ASSUMPTION = 'Took "LA" to mean LAX. Burbank (BUR), Long Beach (LGB), Ontario (ONT) and Santa Ana (SNA) also serve the area.';
+
 const ALIASES: { pattern: RegExp; codes: string[]; assumption?: string }[] = [
   { pattern: /\b(santa ana|john wayne|orange county)\b/i, codes: ['SNA'] },
-  { pattern: /\b(la|l\.a\.|los angeles)\b/i, codes: ['LAX'], assumption: 'Took "LA" to mean LAX. Burbank (BUR), Long Beach (LGB), Ontario (ONT) and Santa Ana (SNA) also serve the area.' },
+  // "LA" is matched only as the capitalized abbreviation: "La Guardia" or "La Crosse" must not become LAX.
+  { pattern: /(?<![A-Za-z])(?:LA|L\.A\.)(?![A-Za-z])/, codes: ['LAX'], assumption: LA_ASSUMPTION },
+  { pattern: /\blos angeles\b/i, codes: ['LAX'], assumption: LA_ASSUMPTION },
   { pattern: /\bsan francisco\b/i, codes: ['SFO'], assumption: 'Took San Francisco to mean SFO. Oakland (OAK) and San Jose (SJC) are separate airports.' },
   { pattern: /\banchorage\b/i, codes: ['ANC'] },
   { pattern: /\b(new york|nyc)\b/i, codes: ['JFK', 'LGA', 'EWR'], assumption: 'New York has three major airports: JFK, LaGuardia (LGA) and Newark (EWR).' },
@@ -89,7 +93,7 @@ export function matchAliases(text: string): AliasMatch {
   hits.sort((x, y) => x.index - y.index);
   return {
     codes: [...new Set(hits.flatMap((h) => h.codes))],
-    assumptions: hits.map((h) => h.assumption).filter((a): a is string => Boolean(a)),
+    assumptions: [...new Set(hits.map((h) => h.assumption).filter((a): a is string => Boolean(a)))],
   };
 }
 
@@ -229,4 +233,20 @@ export function byAirport<T extends { airport: string }>(rows: T[]): Map<string,
     else groups.set(r.airport, [r]);
   }
   return groups;
+}
+
+/** OurAirports regions whose airports report to BTS as US airports (states and territories). */
+const US_REGION = /^(US|PR|VI|GU|AS|MP)-/;
+
+/**
+ * BTS data is US data: for an airport abroad it holds only that airport's flights to or from the US.
+ * Returns one warning per such airport, so a tool can say what its figures actually describe.
+ */
+export function foreignAirportWarnings(rows: { iata: string; region: string | null }[], codes: string[]): string[] {
+  return codes
+    .filter((c) => {
+      const region = rows.find((r) => r.iata === c)?.region;
+      return region != null && !US_REGION.test(region);
+    })
+    .map((c) => `${c} is outside the US: BTS data covers only its flights to and from the US, so these figures describe that slice, not the whole airport.`);
 }

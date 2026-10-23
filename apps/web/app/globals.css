@@ -139,14 +139,14 @@ body {
 .md p { margin: 0 0 0.75em; }
 .md p:last-child { margin-bottom: 0; }
 .md strong { font-weight: 600; }
-.md ul, .md ol { margin: 0 0 0.75em; padding-left: 1.1em; }
+.md ul, .md ol { margin: 0 0 0.75em; padding-inline-start: 1.1em; }
 .md ol { list-style: decimal; }
 .md li { margin: 0.2em 0; }
 .md ol > li::marker { color: var(--cw-muted); }
 /* Bullets drawn by hand so the dot's left edge sits exactly on the paragraph edge. */
 .md ul { list-style: none; }
 .md ul > li { position: relative; }
-.md ul > li::before { content: ''; position: absolute; left: -1.1em; top: calc(0.825em - 2.5px); width: 5px; height: 5px; border-radius: 50%; background: var(--cw-muted); }
+.md ul > li::before { content: ''; position: absolute; inset-inline-start: -1.1em; top: calc(0.825em - 2.5px); width: 5px; height: 5px; border-radius: 50%; background: var(--cw-muted); }
 .md a { color: var(--cw-brand-2); text-decoration: underline; text-underline-offset: 2px; }
 .md h1, .md h2, .md h3 { font-size: 15px; font-weight: 600; margin: 1em 0 0.4em; }
 .md table { border-collapse: collapse; margin: 0.25em 0 0.9em; font-size: 14px; display: block; overflow-x: auto; max-width: 100%; }

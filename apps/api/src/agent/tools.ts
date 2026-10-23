@@ -22,6 +22,7 @@ import type { Db } from '@clearway/db';
 import * as repo from '../data/repo';
 import { SOURCES, type SourceId } from '../data/sources';
 import {
+  busiestFirst,
   byAirport,
   chooseEnd,
   delayCauseShares,
@@ -112,30 +113,33 @@ export function createTools(getDb: () => Db) {
         let codes = [...aliases.codes, ...typedCodes];
         let rows = await repo.airportsByCodes(db, codes);
         let confidence: 'high' | 'medium' = 'high';
-        // Names listed beside codes or city aliases ("La Guardia and JFK") are looked up one by one.
-        let names = rows.length > 0 ? unmatchedPlaces(query, aliases) : [];
-        if (rows.length === 0) {
-          rows = rankBySize(await repo.searchAirports(db, query.trim())).slice(0, 5);
+        const busiest = async <T extends { iata: string; airportType: string | null }>(found: T[]) =>
+          found.length > 1 ? busiestFirst(found, await repo.recentPassengers(db, found.map((r) => r.iata))) : found;
+        // Each place in a list ("La Guardia, Newark") is looked up on its own, as is a name listed beside
+        // codes or city aliases ("La Guardia and JFK") and a place with its state ("Portland, Maine").
+        const listed = listedPlaces(query);
+        const places = rows.length > 0 ? unmatchedPlaces(query, aliases) : listed.length > 1 || listed[0]?.state ? listed : [];
+        if (rows.length === 0 && places.length === 0) {
+          rows = (await busiest(await repo.searchAirports(db, query.trim()))).slice(0, 5);
           codes = rows.map((r) => r.iata);
           if (rows.length > 1) {
             confidence = 'medium';
-            assumptions.push(`Several airports match "${query.trim()}"; listed largest first. Ask the user if the first is not the one they meant.`);
+            assumptions.push(`Several airports match "${query.trim()}"; listed busiest first (passengers, latest 12 months). Ask the user if the first is not the one they meant.`);
           }
-          // A list that matches nothing as a whole ("La Guardia, Newark") is looked up place by place.
-          const places = listedPlaces(query);
-          if (rows.length === 0 && places.length > 1) names = places.map((p) => p.text);
         }
-        for (const name of names) {
-          const matches = rankBySize(await repo.searchAirports(db, name));
+        for (const place of places) {
+          const label = place.state ? `${place.text}, ${place.state}` : place.text;
+          const matches = await busiest(await repo.searchAirports(db, place.text, place.state));
           const top = matches[0];
           if (!top) {
             confidence = 'medium';
-            warnings.push(`No airport matched "${name}".`);
+            warnings.push(`No airport matched "${label}".`);
             continue;
           }
           if (matches.length > 1) {
             confidence = 'medium';
-            assumptions.push(`Took "${name}" to mean ${top.iata} (${top.name}), the largest of the airports matching that name. Ask the user if they meant another.`);
+            const others = matches.slice(1, 4).map((m) => m.iata).join(', ');
+            assumptions.push(`Took "${label}" to mean ${top.iata} (${top.name}), the busiest airport matching that name; others: ${others}. Ask the user if they meant another.`);
           }
           if (!codes.includes(top.iata)) {
             codes.push(top.iata);

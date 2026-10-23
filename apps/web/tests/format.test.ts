@@ -1,11 +1,26 @@
 import { describe, expect, it } from 'vitest';
-import { alignedPcts, compact, dayLabel, monthLabel, speakable, splitLead } from '../lib/format';
+import { alignedPcts, columnDecimals, compact, dayLabel, listOf, monthLabel, pct, pts, signedPct, speakable, splitLead } from '../lib/format';
 
 describe('display formatting', () => {
   it('gives a column of percentages the same decimals', () => {
     expect(alignedPcts([19.3, 18])).toEqual(['19.3%', '18.0%']);
     expect(alignedPcts([1, 0.93])).toEqual(['1.00%', '0.93%']);
     expect(alignedPcts([null, 5])).toEqual(['n/a', '5%']);
+  });
+
+  it('fixes decimals per column and keeps the true minus sign', () => {
+    expect(columnDecimals([-2.6, -5, null])).toBe(1);
+    expect(signedPct(-5, 1)).toBe('−5.0%');
+    expect(signedPct(4.2, 1)).toBe('+4.2%');
+    expect(pct(82, 1)).toBe('82.0%');
+    expect(pts(0, 1)).toBe('0.0 pts');
+    expect(pct(null, 1)).toBe('n/a');
+  });
+
+  it('lists airports the way a sentence would', () => {
+    expect(listOf(['JFK'])).toBe('JFK');
+    expect(listOf(['JFK', 'LGA'])).toBe('JFK and LGA');
+    expect(listOf(['JFK', 'LGA', 'EWR'])).toBe('JFK, LGA and EWR');
   });
 
   it('labels months and days without time-zone drift', () => {

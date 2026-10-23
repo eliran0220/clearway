@@ -117,19 +117,47 @@ export async function airportsInRegions(db: Db, regions: string[]) {
     .orderBy(asc(airports.iata));
 }
 
-/** Name or city search among airports with scheduled service. Callers rank the matches by size. */
-export async function searchAirports(db: Db, text: string, limit = 25) {
-  const pattern = `%${text.replace(/[%_\\]/g, (c) => `\\${c}`)}%`;
-  // Second chance with spaces and punctuation ignored, so "La Guardia" finds "LaGuardia Airport".
-  // Letters and digits only, so nothing in it is a LIKE wildcard; very short text would match too much.
+// Words that every airport name has; they narrow nothing ("Houston airport" is a search for Houston).
+const GENERIC_WORDS = new Set(['airport', 'international', 'intl', 'regional', 'the', 'of']);
+
+/**
+ * Name or city search among airports with scheduled service, optionally within one state. Callers
+ * rank the matches by traffic. Matches the text as typed, or with spacing ignored ("La Guardia" finds
+ * "LaGuardia Airport"), or every word somewhere in the name and city ("Houston Bush" finds George Bush
+ * Intercontinental). Words are letters and digits only, so nothing in them is a LIKE wildcard.
+ */
+export async function searchAirports(db: Db, text: string, state?: string, limit = 50) {
+  const escaped = text.trim().replace(/[%_\\]/g, (c) => `\\${c}`);
+  // Two letters inside a longer name mean nothing ("ME" is in "Adnan Menderes"): short text must match whole.
+  const pattern = escaped.length < 3 ? escaped : `%${escaped}%`;
   const squeezed = text.toLowerCase().replace(/[^a-z0-9]/g, '');
-  const bySqueezedName = squeezed.length >= 4 ? [like(sql`regexp_replace(lower(${airports.name}), '[^a-z0-9]', '', 'g')`, `%${squeezed}%`)] : [];
+  const words = text
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((w) => w.length >= 2 && !GENERIC_WORDS.has(w));
+  const nameAndCity = sql`lower(${airports.name} || ' ' || coalesce(${airports.city}, ''))`;
+  const matches = [ilike(airports.name, pattern), ilike(airports.city, pattern)];
+  // Very short text would match too much.
+  if (squeezed.length >= 4) matches.push(like(sql`regexp_replace(lower(${airports.name}), '[^a-z0-9]', '', 'g')`, `%${squeezed}%`));
+  if (words.length > 1 || (words.length === 1 && (words[0] as string).length >= 3)) matches.push(and(...words.map((w) => like(nameAndCity, `%${w}%`)))!);
   return db
     .select()
     .from(airports)
-    .where(and(eq(airports.scheduledService, true), or(ilike(airports.name, pattern), ilike(airports.city, pattern), ...bySqueezedName)))
+    .where(and(eq(airports.scheduledService, true), state ? eq(airports.region, `US-${state}`) : undefined, or(...matches)))
     .orderBy(asc(airports.iata))
     .limit(limit);
+}
+
+/** Outbound passengers per airport over the latest 12 loaded months, so the busiest of several matches comes first. */
+export async function recentPassengers(db: Db, codes: string[]): Promise<Map<string, number>> {
+  if (codes.length === 0) return new Map();
+  const t = airportTrafficMonthly;
+  const rows = await db
+    .select({ airport: t.airport, passengers: sql<number>`coalesce(sum(${t.passengers}), 0)::float8` })
+    .from(t)
+    .where(and(inArray(t.airport, codes), sql`${t.month} > (select max(${t.month}) from ${t}) - interval '12 months'`))
+    .groupBy(t.airport);
+  return new Map(rows.map((r) => [r.airport, Number(r.passengers)]));
 }
 
 export async function constraintsFor(db: Db, codes: string[]) {

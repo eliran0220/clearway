@@ -1,15 +1,19 @@
 import type { Envelope, MetricsData } from '@/lib/types';
-import { compact, pct, pts, signedPct } from '@/lib/format';
+import { columnDecimals, compact, listOf, pct, pts, signedPct } from '@/lib/format';
 import { Card } from '../card';
 
 // The three growth columns share one header, so each column's own label stays short enough to fit.
 const GROWTH = ['Passengers', 'Flights', 'Seats'];
 const single = 'whitespace-nowrap pb-2 pl-3 text-right align-bottom font-medium';
 
+const DECIMAL_COLUMNS = ['passengerGrowthPct', 'flightGrowthPct', 'seatGrowthPct', 'supplyGapPts', 'loadFactorPct'] as const;
+
 export function MetricsCard({ envelope }: { envelope: Envelope<MetricsData> }) {
   const d = envelope.data;
+  // One number of decimals per column, so values line up (82.0% beside 80.8%).
+  const dec = Object.fromEntries(DECIMAL_COLUMNS.map((k) => [k, columnDecimals(d.airports.map((a) => a[k]))])) as Record<(typeof DECIMAL_COLUMNS)[number], number>;
   return (
-    <Card title={`Traffic: ${d.airports.map((a) => a.airport).join(', ')}`} envelope={envelope}>
+    <Card title={`Traffic: ${listOf(d.airports.map((a) => a.airport))}`} envelope={envelope}>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[36rem] table-fixed text-sm">
           <colgroup>
@@ -54,11 +58,11 @@ export function MetricsCard({ envelope }: { envelope: Envelope<MetricsData> }) {
                   </span>
                 </td>
                 <td className="py-2 pl-3 text-right">{compact(a.passengers12m)}</td>
-                <td className="py-2 pl-3 text-right">{signedPct(a.passengerGrowthPct)}</td>
-                <td className="py-2 pl-3 text-right">{signedPct(a.flightGrowthPct)}</td>
-                <td className="py-2 pl-3 text-right">{signedPct(a.seatGrowthPct)}</td>
-                <td className="py-2 pl-3 text-right">{pts(a.supplyGapPts)}</td>
-                <td className="py-2 pl-3 text-right">{pct(a.loadFactorPct)}</td>
+                <td className="py-2 pl-3 text-right">{signedPct(a.passengerGrowthPct, dec.passengerGrowthPct)}</td>
+                <td className="py-2 pl-3 text-right">{signedPct(a.flightGrowthPct, dec.flightGrowthPct)}</td>
+                <td className="py-2 pl-3 text-right">{signedPct(a.seatGrowthPct, dec.seatGrowthPct)}</td>
+                <td className="py-2 pl-3 text-right">{pts(a.supplyGapPts, dec.supplyGapPts)}</td>
+                <td className="py-2 pl-3 text-right">{pct(a.loadFactorPct, dec.loadFactorPct)}</td>
               </tr>
             ))}
           </tbody>

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  busiestFirst,
   chooseEnd,
   delayCauseShares,
   distanceBands,
@@ -151,16 +152,34 @@ describe('edge cases found in the bug hunt', () => {
   it('splits a list of places, keeping names with spaces whole', () => {
     expect(listedPlaces('La Guardia, Newark').map((p) => p.text)).toEqual(['La Guardia', 'Newark']);
     expect(listedPlaces('Boston and Providence vs. Hartford').map((p) => p.text)).toEqual(['Boston', 'Providence', 'Hartford']);
-    expect(listedPlaces('Dallas/Fort Worth').map((p) => p.text)).toEqual(['Dallas', 'Fort Worth']);
+    expect(listedPlaces('Dallas/Fort Worth, Houston Bush').map((p) => p.text)).toEqual(['Dallas/Fort Worth', 'Houston Bush']);
     expect(listedPlaces('Portland International Jetport').map((p) => p.text)).toEqual(['Portland International Jetport']);
     expect(listedPlaces('  Newark ,  ')).toEqual([{ text: 'Newark', start: 2, end: 8 }]);
   });
 
+  it('reads a state after a place as narrowing it, not as another place', () => {
+    expect(listedPlaces('Portland, Maine')).toEqual([{ text: 'Portland', start: 0, end: 15, state: 'ME' }]);
+    expect(listedPlaces('Portland, OR and Columbus, Ohio').map((p) => [p.text, p.state])).toEqual([['Portland', 'OR'], ['Columbus', 'OH']]);
+    expect(listedPlaces('Maine').map((p) => [p.text, p.state])).toEqual([['Maine', undefined]]);
+  });
+
   it('looks up names listed beside a code or a city alias instead of dropping them', () => {
-    expect(unmatchedPlaces('La Guardia and JFK', matchAliases('La Guardia and JFK'))).toEqual(['La Guardia']);
-    expect(unmatchedPlaces('LA and Burbank', matchAliases('LA and Burbank'))).toEqual(['Burbank']);
-    expect(unmatchedPlaces('LA and Santa Ana', matchAliases('LA and Santa Ana'))).toEqual([]);
-    expect(unmatchedPlaces('Washington, DC and Boston', matchAliases('Washington, DC and Boston'))).toEqual([]);
-    expect(unmatchedPlaces('SFO, OAK', matchAliases('SFO, OAK'))).toEqual([]);
+    const names = (q: string) => unmatchedPlaces(q, matchAliases(q)).map((p) => p.text);
+    expect(names('La Guardia and JFK')).toEqual(['La Guardia']);
+    expect(names('LA and Burbank')).toEqual(['Burbank']);
+    expect(names('LA and Santa Ana')).toEqual([]);
+    expect(names('Washington, DC and Boston')).toEqual([]);
+    expect(names('SFO, OAK')).toEqual([]);
+  });
+
+  it('puts the busiest of several matching airports first', () => {
+    const rows = [
+      { iata: 'HOU', airportType: 'large_airport' },
+      { iata: 'IAH', airportType: 'large_airport' },
+      { iata: 'EFD', airportType: 'medium_airport' },
+    ];
+    const pax = new Map([['HOU', 4_800_000], ['IAH', 23_400_000]]);
+    expect(busiestFirst(rows, pax).map((r) => r.iata)).toEqual(['IAH', 'HOU', 'EFD']);
+    expect(busiestFirst(rows, new Map()).map((r) => r.iata)).toEqual(['HOU', 'IAH', 'EFD']);
   });
 });

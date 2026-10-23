@@ -4,7 +4,7 @@ import type { UIMessage } from 'ai';
 import { Check, CircleAlert, LoaderCircle, Volume2 } from 'lucide-react';
 import type { CongestionData, Envelope, LiveData, LongHaulData, MetricsData, PressureData, RankingData, ToolPart } from '@/lib/types';
 import { isToolPart, toolNameOf } from '@/lib/types';
-import { splitLead } from '@/lib/format';
+import { listOf, splitLead } from '@/lib/format';
 import { AnswerText } from './markdown';
 import { CongestionCard } from './cards/congestion-card';
 import { LiveCard } from './cards/live-card';
@@ -40,11 +40,11 @@ function doneLabel(name: string, part: ToolPart): string {
     case 'getLongHaulShare':
       return `Counted ${String(input.airport ?? '')} ${input.scope === 'passenger' ? 'passenger ' : ''}departures at ${Number(input.thresholdKm ?? 4000).toLocaleString('en-US')} km`;
     case 'compareCongestion':
-      return `Compared ${((input.airports as string[] | undefined) ?? []).join(' and ')}`;
+      return `Compared ${listOf((input.airports as string[] | undefined) ?? [])}`;
     case 'assessDemandPressure':
       return `Checked demand signals at ${String(input.airport ?? '')}`;
     case 'getAirportMetrics':
-      return `Pulled traffic for ${((input.airports as string[] | undefined) ?? []).join(', ')}`;
+      return `Pulled traffic for ${listOf((input.airports as string[] | undefined) ?? [])}`;
     case 'getLiveConditions':
       return 'Checked FAA status and weather';
     default:
@@ -59,8 +59,6 @@ interface Step {
   title?: string;
   codes?: string[]; // set on airport lookups that can merge with the next one
 }
-
-const listCodes = (codes: string[]) => (codes.length <= 2 ? codes.join(' and ') : `${codes.slice(0, -1).join(', ')} and ${codes.at(-1)}`);
 
 /**
  * One step per tool call, except that back-to-back airport lookups read as a single "Found LAX and SNA",
@@ -83,10 +81,10 @@ function stepsOf(parts: ToolPart[]): Step[] {
         const prev = steps.at(-1);
         if (prev?.codes) {
           prev.codes = [...new Set([...prev.codes, ...codes])];
-          prev.label = `Found ${listCodes(prev.codes)}`;
+          prev.label = `Found ${listOf(prev.codes)}`;
           continue;
         }
-        steps.push({ key: p.toolCallId, state, label: `Found ${listCodes(codes)}`, codes });
+        steps.push({ key: p.toolCallId, state, label: `Found ${listOf(codes)}`, codes });
         continue;
       }
     }

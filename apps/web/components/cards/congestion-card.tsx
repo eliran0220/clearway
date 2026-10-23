@@ -1,6 +1,6 @@
 import { ExternalLink } from 'lucide-react';
 import type { CongestionData, Envelope } from '@/lib/types';
-import { alignedPcts, int } from '@/lib/format';
+import { alignedPcts, int, listOf } from '@/lib/format';
 import { Card } from '../card';
 
 type Airport = CongestionData['airports'][number];
@@ -42,7 +42,7 @@ export function CongestionCard({ envelope }: { envelope: Envelope<CongestionData
   const cause = (key: (typeof CAUSES)[number]['key']) => d.airports.map((a: Airport) => a.delayCausesPct[key]);
 
   return (
-    <Card title={`Congestion: ${d.airports.map((a) => a.airport).join(' and ')}`} envelope={envelope}>
+    <Card title={`Congestion: ${listOf(d.airports.map((a) => a.airport))}`} envelope={envelope}>
       {/* -mx-2 px-2 gives highlights room to bleed without making the scroll box overflow. */}
       <div className="-mx-2 overflow-x-auto px-2">
         <table className="w-full min-w-[22rem] table-fixed text-sm">

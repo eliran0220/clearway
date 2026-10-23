@@ -1,6 +1,6 @@
 import { Check, ExternalLink, Minus } from 'lucide-react';
 import type { Envelope, PressureData } from '@/lib/types';
-import { compact, signedPct } from '@/lib/format';
+import { columnDecimals, compact, signedPct } from '@/lib/format';
 import { Card } from '../card';
 import { LoadFactorLine } from '../sparkline';
 
@@ -15,6 +15,7 @@ export function PressureCard({ envelope }: { envelope: Envelope<PressureData> })
   const d = envelope.data;
   const level = LEVEL[d.level];
   const m = d.metrics;
+  const growthDecimals = columnDecimals([m.passengerGrowthPct, m.seatGrowthPct, m.flightGrowthPct]);
   return (
     <Card title={`Demand pressure: ${d.airport}`} envelope={envelope}>
       <div className="mb-4 flex flex-wrap items-center gap-3">
@@ -42,11 +43,11 @@ export function PressureCard({ envelope }: { envelope: Envelope<PressureData> })
           <dt className="text-muted">Passengers, 12 months</dt>
           <dd className="text-right font-semibold">{compact(m.passengers12m)}</dd>
           <dt className="text-muted">Passenger growth</dt>
-          <dd className="text-right font-semibold">{signedPct(m.passengerGrowthPct)}</dd>
+          <dd className="text-right font-semibold">{signedPct(m.passengerGrowthPct, growthDecimals)}</dd>
           <dt className="text-muted">Seat growth</dt>
-          <dd className="text-right font-semibold">{signedPct(m.seatGrowthPct)}</dd>
+          <dd className="text-right font-semibold">{signedPct(m.seatGrowthPct, growthDecimals)}</dd>
           <dt className="text-muted">Flight growth</dt>
-          <dd className="text-right font-semibold">{signedPct(m.flightGrowthPct)}</dd>
+          <dd className="text-right font-semibold">{signedPct(m.flightGrowthPct, growthDecimals)}</dd>
         </dl>
       </div>
 

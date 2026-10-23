@@ -79,6 +79,8 @@ const ALIASES: { pattern: RegExp; codes: string[]; assumption?: string }[] = [
   { pattern: /\b(washington,? d\.?c\.?|washington dc)\b/i, codes: ['DCA', 'IAD', 'BWI'], assumption: 'Washington is served by Reagan National (DCA), Dulles (IAD) and Baltimore/Washington (BWI).' },
   { pattern: /\bchicago\b/i, codes: ['ORD', 'MDW'], assumption: "Chicago has two airports: O'Hare (ORD) and Midway (MDW)." },
   { pattern: /\bboston\b/i, codes: ['BOS'] },
+  // Guam's airport name and city do not contain "Guam".
+  { pattern: /\bguam\b/i, codes: ['GUM'] },
 ];
 
 /**
@@ -99,18 +101,43 @@ export function matchAliases(text: string): AliasMatch {
   };
 }
 
-const LIST_SEPARATOR = /\s*(?:[,;&/]|\band\b|\bvs\b\.?|\bversus\b)\s*/gi;
+// "/" is not a separator: it is part of names such as Dallas/Fort Worth and Baltimore/Washington.
+const LIST_SEPARATOR = /\s*(?:[,;&]|\band\b|\bvs\b\.?|\bversus\b)\s*/gi;
 
-/** The places in a list ("La Guardia, Newark", "Boston and Providence"), with where each sits in the text. */
-export function listedPlaces(text: string): { text: string; start: number; end: number }[] {
-  const places: { text: string; start: number; end: number }[] = [];
+export interface Place {
+  text: string;
+  start: number;
+  end: number;
+  state?: string; // from "Portland, Maine" or "Portland, OR": narrows the name search to that state
+}
+
+/** A state name or a two-letter state code standing alone ("Maine", "OR"). */
+function stateOf(part: string): string | null {
+  const named = STATES[part.toLowerCase()];
+  if (named) return named;
+  return /^[a-z]{2}$/i.test(part) && STATE_CODES.has(part.toUpperCase()) ? part.toUpperCase() : null;
+}
+
+/**
+ * The places in a list ("La Guardia, Newark", "Boston and Providence"), with where each sits in the
+ * text. A state right after a place qualifies it ("Portland, Maine") instead of being a place itself.
+ */
+export function listedPlaces(text: string): Place[] {
+  const places: Place[] = [];
   const add = (from: number, to: number) => {
     const raw = text.slice(from, to);
     const trimmed = raw.trim();
-    if (trimmed) {
-      const start = from + raw.indexOf(trimmed);
-      places.push({ text: trimmed, start, end: start + trimmed.length });
+    if (!trimmed) return;
+    const start = from + raw.indexOf(trimmed);
+    const end = start + trimmed.length;
+    const prev = places.at(-1);
+    const state = stateOf(trimmed);
+    if (state && prev && !prev.state) {
+      prev.state = state;
+      prev.end = end;
+      return;
     }
+    places.push({ text: trimmed, start, end });
   };
   let from = 0;
   for (const m of text.matchAll(LIST_SEPARATOR)) {
@@ -126,10 +153,8 @@ export function listedPlaces(text: string): { text: string; start: number; end: 
  * Places in a list that neither a city alias nor a typed code accounts for ("La Guardia" in
  * "La Guardia and JFK"). Each is looked up by name, so it is not silently dropped.
  */
-export function unmatchedPlaces(text: string, aliases: AliasMatch): string[] {
-  return listedPlaces(text)
-    .filter((p) => !aliases.spans.some(([s, e]) => s < p.end && e > p.start) && !/\b[A-Z0-9]{3}\b/.test(p.text))
-    .map((p) => p.text);
+export function unmatchedPlaces(text: string, aliases: AliasMatch): Place[] {
+  return listedPlaces(text).filter((p) => !aliases.spans.some(([s, e]) => s < p.end && e > p.start) && !/\b[A-Z0-9]{3}\b/.test(p.text));
 }
 
 const TYPE_RANK: Record<string, number> = { large_airport: 3, medium_airport: 2, small_airport: 1 };
@@ -137,6 +162,14 @@ const TYPE_RANK: Record<string, number> = { large_airport: 3, medium_airport: 2,
 /** Largest airports first, then by code. */
 export function rankBySize<T extends { iata: string; airportType: string | null }>(rows: T[]): T[] {
   return [...rows].sort((a, b) => (TYPE_RANK[b.airportType ?? ''] ?? 0) - (TYPE_RANK[a.airportType ?? ''] ?? 0) || a.iata.localeCompare(b.iata));
+}
+
+/**
+ * Busiest first by passengers (Houston: IAH before HOU, both "large" airports); airports with no
+ * traffic data follow in size order.
+ */
+export function busiestFirst<T extends { iata: string; airportType: string | null }>(rows: T[], passengers: Map<string, number>): T[] {
+  return rankBySize(rows).sort((a, b) => (passengers.get(b.iata) ?? -1) - (passengers.get(a.iata) ?? -1));
 }
 
 // ---------- windows ----------

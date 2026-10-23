@@ -1,5 +1,5 @@
 import type { Envelope, LongHaulData } from '@/lib/types';
-import { int } from '@/lib/format';
+import { alignedPcts, int, pct } from '@/lib/format';
 import { Card } from '../card';
 
 /** Used only if the API did not list its thresholds. */
@@ -13,6 +13,7 @@ export function LongHaulCard({ envelope, onAsk, busy }: { envelope: Envelope<Lon
   const share = d.longHaulSharePct ?? 0;
   const deg = (share / 100) * 360;
   const otherScope = d.scope === 'all' ? 'passenger' : 'all';
+  const bandShares = alignedPcts(d.bands.map((b) => b.sharePct));
 
   return (
     <Card title={`Long-haul share: ${d.airport} departures`} envelope={envelope}>
@@ -62,7 +63,7 @@ export function LongHaulCard({ envelope, onAsk, busy }: { envelope: Envelope<Lon
         >
           <div className="grid size-28 place-items-center rounded-full bg-surface text-center">
             <div>
-              <div className="text-2xl font-bold">{d.longHaulSharePct ?? 'n/a'}%</div>
+              <div className="text-2xl font-bold">{pct(d.longHaulSharePct)}</div>
               <div className="text-xs text-muted">long-haul</div>
             </div>
           </div>
@@ -71,14 +72,14 @@ export function LongHaulCard({ envelope, onAsk, busy }: { envelope: Envelope<Lon
         <div className="min-w-[14rem] flex-1 text-sm">
           <p className="mb-2 text-muted">
             {int(d.longHaulDepartures)} of {int(d.departuresWithDistance)} departures flew {d.thresholdKm.toLocaleString('en-US')} km ({d.thresholdMi.toLocaleString('en-US')} mi) or more.{' '}
-            {d.scope === 'all' ? 'Passenger only' : 'All services'}: {otherScope === 'passenger' ? d.bothScopes.passengerOnlyPct : d.bothScopes.allServicesPct}%.
+            {d.scope === 'all' ? 'Passenger only' : 'All services'}: {pct(otherScope === 'passenger' ? d.bothScopes.passengerOnlyPct : d.bothScopes.allServicesPct)}.
           </p>
           <ul className="mb-3 space-y-1">
-            {d.bands.map((b) => (
+            {d.bands.map((b, i) => (
               <li key={b.label} className="flex justify-between gap-4 border-b border-line py-1">
                 <span className="text-muted">{b.label}</span>
                 <span>
-                  {int(b.departures)} <span className="text-muted">({b.sharePct ?? 'n/a'}%)</span>
+                  {int(b.departures)} <span className="text-muted">({bandShares[i]})</span>
                 </span>
               </li>
             ))}

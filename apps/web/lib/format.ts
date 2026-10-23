@@ -24,15 +24,23 @@ export function compact(n: number | null | undefined): string {
   return String(Math.round(n));
 }
 
-/** Numbers for display, with a true minus sign (−) rather than a hyphen for negatives. */
-export const num = (n: number) => String(n).replace('-', '\u2212');
+/**
+ * Numbers for display, with a true minus sign (−) rather than a hyphen for negatives. `digits` fixes
+ * the decimals, so a column reads 5.0 beside 2.6 instead of 5 beside 2.6.
+ */
+export const num = (n: number, digits?: number) => (digits == null ? String(n) : n.toFixed(digits)).replace('-', '\u2212');
 
-export const pct = (n: number | null | undefined) => (n == null ? 'n/a' : `${num(n)}%`);
+/** The decimals a column of numbers needs: the most any value has, at most 2. */
+export function columnDecimals(values: (number | null | undefined)[]): number {
+  const decimals = (n: number) => (String(n).split('.')[1] ?? '').length;
+  return Math.min(2, Math.max(0, ...values.filter((v): v is number => v != null).map(decimals)));
+}
+
+export const pct = (n: number | null | undefined, digits?: number) => (n == null ? 'n/a' : `${num(n, digits)}%`);
 /** Formats a column of percentages with the same number of decimals, so 18 sits as 18.0% beside 19.3%. */
 export function alignedPcts(values: (number | null | undefined)[]): string[] {
-  const decimals = (n: number) => (String(n).split('.')[1] ?? '').length;
-  const digits = Math.min(2, Math.max(0, ...values.filter((v): v is number => v != null).map(decimals)));
-  return values.map((v) => (v == null ? 'n/a' : `${v.toFixed(digits)}%`));
+  const digits = columnDecimals(values);
+  return values.map((v) => pct(v, digits));
 }
 
 /** '2027-05-28T16:00:00Z' -> '28 May 2027' */
@@ -44,8 +52,11 @@ export function dayLabel(iso: string | null | undefined): string {
   return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
 }
 
-export const signedPct = (n: number | null | undefined) => (n == null ? 'n/a' : `${n > 0 ? '+' : ''}${num(n)}%`);
-export const pts = (n: number | null | undefined) => (n == null ? 'n/a' : `${n > 0 ? '+' : ''}${num(n)} pts`);
+export const signedPct = (n: number | null | undefined, digits?: number) => (n == null ? 'n/a' : `${n > 0 ? '+' : ''}${num(n, digits)}%`);
+export const pts = (n: number | null | undefined, digits?: number) => (n == null ? 'n/a' : `${n > 0 ? '+' : ''}${num(n, digits)} pts`);
+
+/** "JFK", "JFK and LGA", "JFK, LGA and EWR" */
+export const listOf = (items: string[]) => (items.length <= 2 ? items.join(' and ') : `${items.slice(0, -1).join(', ')} and ${items.at(-1)}`);
 
 export function timeAgo(iso: string | null | undefined): string {
   if (!iso) return '';

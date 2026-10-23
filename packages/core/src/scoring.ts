@@ -177,19 +177,24 @@ export function demandPressure(input: PressureInput): { signals: Signal[]; metCo
   const t = PRESSURE_THRESHOLDS;
   const benchmark = input.loadFactorBenchmark ?? null;
   const fullPlanes = (lf: number) => (benchmark != null ? lf > benchmark : lf >= t.loadFactor);
-  const lfComparison = benchmark != null ? `national ${pct(benchmark)} for the same months` : `threshold ${pct(t.loadFactor)}`;
+  const lfComparison = benchmark != null ? `against ${pct(benchmark)} nationally` : `against a ${pct(t.loadFactor)} threshold`;
+  const gapText = (gap: number) => {
+    const p = round(Math.abs(gap) * 100);
+    if (p === 0) return 'passengers grew as fast as seats';
+    return gap > 0 ? `passengers grew ${p} pts faster than seats` : `seats grew ${p} pts faster than passengers`;
+  };
   const signals: Signal[] = [
     {
       id: 'full_planes',
       label: 'Planes are full',
       met: input.loadFactor == null ? null : fullPlanes(input.loadFactor),
-      evidence: input.loadFactor == null ? 'load factor unavailable' : `load factor ${pct(input.loadFactor)} (${lfComparison})`,
+      evidence: input.loadFactor == null ? 'seat occupancy unavailable' : `${pct(input.loadFactor)} of seats filled, ${lfComparison}`,
     },
     {
       id: 'demand_outpacing_supply',
       label: 'Demand outpacing seats',
       met: input.supplyGap == null ? null : input.supplyGap > 0,
-      evidence: input.supplyGap == null ? 'growth unavailable' : `passenger growth minus seat growth = ${round(input.supplyGap * 100)} pts`,
+      evidence: input.supplyGap == null ? 'growth unavailable' : gapText(input.supplyGap),
     },
     {
       id: 'operations_strained',
@@ -199,15 +204,15 @@ export function demandPressure(input: PressureInput): { signals: Signal[]; metCo
           ? null
           : (input.delayRate ?? 0) >= t.delayRate || (input.nasShare ?? 0) > t.nasShare,
       evidence: [
-        input.delayRate == null ? 'delay rate unavailable' : `delay rate ${pct(input.delayRate)}`,
-        input.nasShare == null ? 'NAS share unavailable' : `NAS share of delay minutes ${pct(input.nasShare)}`,
+        input.delayRate == null ? 'delay rate unavailable' : `${pct(input.delayRate)} of arrivals 15+ minutes late`,
+        input.nasShare == null ? 'system share unavailable' : `${pct(input.nasShare)} of delay minutes from the air-traffic system`,
       ].join('; '),
     },
     {
       id: 'documented_constraint',
       label: 'Documented capacity constraint',
       met: input.documentedConstraints > 0,
-      evidence: input.documentedConstraints === 1 ? '1 sourced constraint' : `${input.documentedConstraints} sourced constraints`,
+      evidence: input.documentedConstraints === 0 ? 'none recorded in Clearway' : input.documentedConstraints === 1 ? '1 documented limit' : `${input.documentedConstraints} documented limits`,
     },
   ];
   const unknown = signals.filter((s) => s.met === null).length;

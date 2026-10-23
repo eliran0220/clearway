@@ -31,7 +31,7 @@ function doneLabel(name: string, part: ToolPart): string {
       const region = out?.region as { label?: string } | null | undefined;
       const airports = (out?.airports as { code: string }[] | undefined) ?? [];
       if (region?.label) return `${region.label}: ${airports.length} airports`;
-      return airports.length ? `Matched ${airports.map((a) => a.code).join(', ')}` : `No match for "${String(input.query ?? '')}"`;
+      return airports.length ? `Found ${airports.map((a) => a.code).join(', ')}` : `No match for "${String(input.query ?? '')}"`;
     }
     case 'rankExpansionCandidates': {
       const counts = out?.counts as { ranked: number; checked: number } | undefined;
@@ -52,28 +52,63 @@ function doneLabel(name: string, part: ToolPart): string {
   }
 }
 
-/** The tools the agent ran for this answer, as a compact trail. */
+interface Step {
+  key: string;
+  state: 'running' | 'done' | 'failed';
+  label: string;
+  title?: string;
+  codes?: string[]; // set on airport lookups that can merge with the next one
+}
+
+const listCodes = (codes: string[]) => (codes.length <= 2 ? codes.join(' and ') : `${codes.slice(0, -1).join(', ')} and ${codes.at(-1)}`);
+
+/** One step per tool call, except that back-to-back airport lookups read as a single "Found LAX and SNA". */
+function stepsOf(parts: ToolPart[]): Step[] {
+  const steps: Step[] = [];
+  for (const p of parts) {
+    const name = toolNameOf(p);
+    const state = p.state === 'output-error' ? 'failed' : p.state === 'output-available' ? 'done' : 'running';
+    if (name === 'resolveAirports' && state === 'done') {
+      const out = (p.output as Envelope<{ region?: { label?: string } | null; airports?: { code: string }[] }> | undefined)?.data;
+      const codes = (out?.airports ?? []).map((a) => a.code);
+      if (!out?.region?.label && codes.length > 0) {
+        const prev = steps.at(-1);
+        if (prev?.codes) {
+          prev.codes = [...new Set([...prev.codes, ...codes])];
+          prev.label = `Found ${listCodes(prev.codes)}`;
+          continue;
+        }
+        steps.push({ key: p.toolCallId, state, label: `Found ${listCodes(codes)}`, codes });
+        continue;
+      }
+    }
+    steps.push({
+      key: p.toolCallId,
+      state,
+      label: state === 'running' ? (RUNNING[name] ?? name) : state === 'failed' ? `${RUNNING[name] ?? name} failed` : doneLabel(name, p),
+      title: state === 'failed' ? p.errorText : undefined,
+    });
+  }
+  return steps;
+}
+
+/** The steps the agent took for this answer, as a compact trail. */
 function ToolTrail({ parts }: { parts: ToolPart[] }) {
   if (parts.length === 0) return null;
   return (
     <ol className="mb-3 flex flex-wrap gap-1.5" aria-label="Steps the agent took">
-      {parts.map((p) => {
-        const name = toolNameOf(p);
-        const running = p.state === 'input-streaming' || p.state === 'input-available';
-        const failed = p.state === 'output-error';
-        return (
-          <li
-            key={p.toolCallId}
-            className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs ${failed ? 'border-critical/30 bg-critical-bg text-critical' : 'border-line bg-surface text-muted'}`}
-            title={failed ? p.errorText : undefined}
-          >
-            {running && <LoaderCircle aria-hidden className="size-3.5 animate-spin motion-reduce:animate-none" />}
-            {!running && !failed && <Check aria-hidden className="size-3.5 text-good" />}
-            {failed && <CircleAlert aria-hidden className="size-3.5" />}
-            {running ? RUNNING[name] ?? name : failed ? `${RUNNING[name] ?? name} failed` : doneLabel(name, p)}
-          </li>
-        );
-      })}
+      {stepsOf(parts).map((s) => (
+        <li
+          key={s.key}
+          className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs ${s.state === 'failed' ? 'border-critical/30 bg-critical-bg text-critical' : 'border-line bg-surface text-muted'}`}
+          title={s.title}
+        >
+          {s.state === 'running' && <LoaderCircle aria-hidden className="size-3.5 animate-spin motion-reduce:animate-none" />}
+          {s.state === 'done' && <Check aria-hidden className="size-3.5 text-good" />}
+          {s.state === 'failed' && <CircleAlert aria-hidden className="size-3.5" />}
+          {s.label}
+        </li>
+      ))}
     </ol>
   );
 }

@@ -138,7 +138,7 @@ describe('demand pressure', () => {
     const base = { supplyGap: 0, delayRate: 0.1, nasShare: 0.1, documentedConstraints: 0 };
     const above = demandPressure({ ...base, loadFactor: 0.84, loadFactorBenchmark: 0.83 });
     expect(above.signals[0].met).toBe(true);
-    expect(above.signals[0].evidence).toBe('load factor 84% (national 83% for the same months)');
+    expect(above.signals[0].evidence).toBe('84% of seats filled, against 83% nationally');
     const below = demandPressure({ ...base, loadFactor: 0.82, loadFactorBenchmark: 0.83 });
     expect(below.signals[0].met).toBe(false);
     const equal = demandPressure({ ...base, loadFactor: 0.83, loadFactorBenchmark: 0.83 });
@@ -149,5 +149,17 @@ describe('demand pressure', () => {
     const r = demandPressure({ loadFactor: null, supplyGap: null, delayRate: 0.3, nasShare: null, documentedConstraints: 0 });
     expect(r.level).toBe('insufficient_data');
     expect(r.signals[0].met).toBeNull();
+  });
+});
+
+describe('signal evidence reads as plain language', () => {
+  const base = { loadFactor: 0.84, delayRate: 0.2, nasShare: 0.2, documentedConstraints: 0, loadFactorBenchmark: 0.8 };
+  it('describes the supply gap in words, not as a formula', () => {
+    expect(demandPressure({ ...base, supplyGap: 0.021 }).signals[1].evidence).toBe('passengers grew 2.1 pts faster than seats');
+    expect(demandPressure({ ...base, supplyGap: -0.004 }).signals[1].evidence).toBe('seats grew 0.4 pts faster than passengers');
+    expect(demandPressure({ ...base, supplyGap: 0 }).signals[1].evidence).toBe('passengers grew as fast as seats');
+  });
+  it('says when no constraint is recorded', () => {
+    expect(demandPressure({ ...base, supplyGap: 0 }).signals[3].evidence).toBe('none recorded in Clearway');
   });
 });

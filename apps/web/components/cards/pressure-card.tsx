@@ -1,6 +1,6 @@
 import { Check, ExternalLink, Minus } from 'lucide-react';
 import type { Envelope, PressureData } from '@/lib/types';
-import { compact, pct, pts, signedPct } from '@/lib/format';
+import { compact, signedPct } from '@/lib/format';
 import { Card } from '../card';
 import { LoadFactorLine } from '../sparkline';
 
@@ -47,10 +47,6 @@ export function PressureCard({ envelope }: { envelope: Envelope<PressureData> })
           <dd className="text-right font-semibold">{signedPct(m.seatGrowthPct)}</dd>
           <dt className="text-muted">Flight growth</dt>
           <dd className="text-right font-semibold">{signedPct(m.flightGrowthPct)}</dd>
-          <dt className="text-muted">Supply gap</dt>
-          <dd className="text-right font-semibold">{pts(m.supplyGapPts)}</dd>
-          <dt className="text-muted">Delayed 15+ min</dt>
-          <dd className="text-right font-semibold">{pct(m.delayRatePct)}</dd>
         </dl>
       </div>
 
@@ -59,9 +55,9 @@ export function PressureCard({ envelope }: { envelope: Envelope<PressureData> })
           <h4 className="mb-1.5 text-xs text-muted">Documented constraints</h4>
           <ul className="space-y-2">
             {d.constraints.map((c) => (
-              <li key={c.kind} className="rounded-lg bg-watch-bg px-3 py-2 text-[13px] text-watch">
+              <li key={c.kind} className="border-l-2 border-watch/70 pl-3 text-[13px] leading-relaxed">
                 {c.summary}{' '}
-                <a href={c.sourceUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-0.5 underline underline-offset-2">
+                <a href={c.sourceUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-0.5 text-muted underline underline-offset-2 hover:text-ink">
                   source <ExternalLink aria-hidden className="size-3" />
                 </a>
               </li>

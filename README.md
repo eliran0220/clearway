@@ -8,7 +8,7 @@ Built for the Deloitte Digital Forward Deployed Engineer exercise "Airport Inves
 
 | Document | For |
 | --- | --- |
-| [Design](docs/DESIGN.md) (one page; the same document as a [PDF](docs/Clearway-Design.pdf)) | The required design document: scoring methodology, where and how AI is used, key tradeoffs |
+| [Design](docs/DESIGN.md) (one page) | The required design document: scoring methodology, where and how AI is used, key tradeoffs |
 | [Engineering notes](docs/ENGINEERING.md) | Optional depth: how we built it, stack and alternatives, data windows, guardrails, testing, limits, next steps |
 | Methodology panel in the app | Anyone using the demo: every weight, range and signal |
 
@@ -23,7 +23,7 @@ apps/web/        Next.js page: chat, result cards with evidence, methodology, br
 apps/api/        Hono API for AWS Lambda: /health, /meta, /chat (agent), daily refresh job
 packages/core/   metrics, screening score, evidence envelope (no I/O)
 packages/db/     Drizzle schema and Neon client
-docs/            DESIGN.md (one-page design, also as PDF), ENGINEERING.md (full notes)
+docs/            DESIGN.md (one-page design), ENGINEERING.md (full notes)
 sst.config.ts    AWS deploy: API Lambda (streaming URL) + daily cron, us-east-2
 ```
 

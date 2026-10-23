@@ -134,11 +134,12 @@ export function Chat() {
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-3xl flex-1 px-4 pb-6 pt-8">
+      <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 pb-6 pt-8">
         {empty ? (
-          <section className="pt-4 sm:pt-10">
-            <h1 className="max-w-xl text-3xl font-bold leading-tight tracking-tight sm:text-4xl">Where should the next terminal investment go?</h1>
-            <p className="mt-3 max-w-xl text-[15px] text-muted">
+          <section className="my-auto py-6">
+            {/* my-auto centers the block between the header and the question box. */}
+            <h1 className="mx-auto max-w-2xl text-balance text-center text-3xl font-bold leading-tight tracking-tight sm:text-4xl">Where should the next terminal investment go?</h1>
+            <p className="mx-auto mt-3 max-w-xl text-balance text-center text-[15px] text-muted">
               Ask about passenger growth, congestion, long-haul flights or demand pressure at US airports. Answers come from BTS and FAA data and show their sources and limits.
             </p>
             <ul className="mt-8 grid gap-3 sm:grid-cols-2">
@@ -155,7 +156,7 @@ export function Chat() {
                 </li>
               ))}
             </ul>
-            <p className="mt-6 text-xs text-muted">Clearway screens airports for further study. It does not estimate returns, construction costs or approvals.</p>
+            <p className="mt-6 text-center text-xs text-muted">Clearway screens airports for further study. It does not estimate returns, construction costs or approvals.</p>
           </section>
         ) : (
           <div className="space-y-8">
@@ -252,7 +253,7 @@ export function Chat() {
               </button>
             )}
           </form>
-          <p className="mt-1.5 px-1 text-xs text-muted" aria-live="polite">
+          <p className="mt-1.5 px-4 text-xs text-muted" aria-live="polite">
             {voice.error ??
               (voice.listening
                 ? 'Speak your question. Tap the mic again to finish; the answer will be read aloud.'

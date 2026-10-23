@@ -8,8 +8,9 @@ Built for the Deloitte Digital Forward Deployed Engineer exercise "Airport Inves
 
 | Document | For |
 | --- | --- |
-| [Clearway brief (one-page PDF)](docs/Clearway-Brief.pdf) | Anyone: the problem, what Clearway does, how it works, the score in short |
-| [docs/DESIGN.md](docs/DESIGN.md) | Engineers: how we built it, stack, scoring methodology, where AI is used, testing, tradeoffs, limits, next steps |
+| [Clearway brief](docs/Clearway-Brief.pdf) (one-page PDF) | Anyone: the problem, what Clearway does, how it works, the score in short |
+| [Design](docs/DESIGN.md) (one page, also as [PDF](docs/Clearway-Design.pdf)) | The required design document: scoring methodology, where and how AI is used, key tradeoffs |
+| [Engineering notes](docs/ENGINEERING.md) | Full technical detail: how we built it, stack, data windows, guardrails, testing, limits, next steps |
 | Methodology panel in the app | Anyone using the demo: every weight, range and signal |
 
 ## Quality
@@ -23,7 +24,7 @@ apps/web/        Next.js page: chat, result cards with evidence, methodology, br
 apps/api/        Hono API for AWS Lambda: /health, /meta, /chat (agent), daily refresh job
 packages/core/   metrics, screening score, evidence envelope (no I/O)
 packages/db/     Drizzle schema and Neon client
-docs/            DESIGN.md (technical design) and the one-page brief (PDF)
+docs/            DESIGN.md (one-page design), ENGINEERING.md (full notes), brief and design PDFs
 sst.config.ts    AWS deploy: API Lambda (streaming URL) + daily cron, us-east-2
 ```
 

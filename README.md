@@ -12,20 +12,9 @@ Built for the Deloitte Digital Forward Deployed Engineer exercise "Airport Inves
 | [docs/DESIGN.md](docs/DESIGN.md) | Engineers: how we built it, stack, scoring methodology, where AI is used, testing, tradeoffs, limits, next steps |
 | Methodology panel in the app | Anyone using the demo: every weight, range and signal |
 
-## Status
+## Quality
 
-| Part | State |
-| --- | --- |
-| Deterministic metrics and screening score (`packages/core`) | Done, 35 unit tests |
-| Database schema and migrations (`packages/db`) | Done, applied to Neon |
-| BTS monthly API adapter and daily refresh job (`apps/api`) | Done, tested on real API rows |
-| T-100 Segment, Delay Causes and OurAirports importers | Done, run on the full real exports |
-| Agent: 7 tools, system prompt, streaming `/chat` route, terminal client | Done, 58 unit tests |
-| Curated constraints (SNA passenger cap, SFO arrival limits) | Done, `data/constraints.json` |
-| Evaluation (`npm run eval`) | 8 of 8 turns pass |
-| Web app (`apps/web`): chat, result cards, evidence, browser voice | Done, tested in Chrome (desktop, phone width, light and dark), 5 unit tests |
-| Sanity check (`npm run smoke`) | Done |
-| Deploy (Vercel + AWS via SST) | Live: web on Vercel, API and daily refresh on AWS us-east-2 |
+98 unit tests (`npm test`), an agent evaluation of the exam questions and follow-ups that fails any answer quoting a number no tool returned (`npm run eval`, 8 of 8), and a sanity check against local or live URLs (`npm run smoke`). CI runs the typecheck, the tests and a production build of the web app on every push.
 
 ## Layout
 
@@ -34,7 +23,7 @@ apps/web/        Next.js page: chat, result cards with evidence, methodology, br
 apps/api/        Hono API for AWS Lambda: /health, /meta, /chat (agent), daily refresh job
 packages/core/   metrics, screening score, evidence envelope (no I/O)
 packages/db/     Drizzle schema and Neon client
-docs/            DESIGN.md
+docs/            DESIGN.md (technical design) and the one-page brief (PDF)
 sst.config.ts    AWS deploy: API Lambda (streaming URL) + daily cron, us-east-2
 ```
 
@@ -47,8 +36,7 @@ npm install
 cp .env.example .env          # then fill DATABASE_URL and ANTHROPIC_API_KEY
 npm test                      # unit tests
 npm run typecheck
-npm run db:generate           # creates SQL migrations from the schema
-npm run db:migrate            # applies them to Neon
+npm run db:migrate            # creates the tables in Neon (migrations are committed; run db:generate only after a schema change)
 npm run data:refresh          # loads BTS monthly airport traffic (first run backfills from 2023-01)
 npm run dev:api               # http://localhost:8787/health
 ```
@@ -115,13 +103,27 @@ npm run smoke -- --api https://<lambda-url> --web https://<app>.vercel.app
 npm run smoke -- --quick                                          # one question instead of four
 ```
 
+## Deploying
+
+The API and the daily job deploy to AWS with SST (region us-east-2, next to the Neon database); the web app deploys to Vercel.
+
+```bash
+# AWS credentials configured locally (aws configure), then once per stage:
+npx sst secret set AnthropicApiKey "<key>" --stage prod
+npx sst secret set DatabaseUrl "<neon connection string>" --stage prod
+npx sst secret set AllowedOrigins "https://<app>.vercel.app,http://localhost:3000" --stage prod
+npm run deploy                # prints apiUrl
+```
+
+On Vercel, import the repo with Root Directory `apps/web` and set `NEXT_PUBLIC_API_URL` to the `apiUrl` (no trailing slash). Vercel redeploys on every push; the API changes only when `npm run deploy` runs. Then run the sanity check against both URLs.
+
 ## Data sources
 
 | Source | Access | Used for |
 | --- | --- | --- |
 | BTS T-100 Segment Summary by Origin Airport (`r495-tyji`) | Public JSON API, refreshed daily | Passengers, seats, growth, load factor |
-| BTS T-100 Segment, All Carriers | Official file export, imported once | Route distances, long-haul share |
-| BTS Airline On-Time Delay Causes | Official file export, imported once | Delay and congestion metrics |
+| BTS T-100 Segment, All Carriers | Official file export, imported (re-import to refresh) | Route distances, long-haul share |
+| BTS Airline On-Time Delay Causes | Official file export, imported (re-import to refresh) | Delay and congestion metrics |
 | OurAirports | Public CSV | Airport names, states, coordinates |
 | FAA NAS Status | Public XML feed, live | Current delay programs and ground stops |
 | NOAA Aviation Weather METAR | Public JSON API, live | Current weather |

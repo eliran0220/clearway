@@ -38,19 +38,19 @@ export function PressureCard({ envelope }: { envelope: Envelope<PressureData> })
       {/* Same two columns and gap as the signals above, so the stats start exactly under the right-hand signals. */}
       <div className="mt-4 grid items-end gap-x-2 gap-y-4 sm:grid-cols-2">
         <LoadFactorLine months={d.monthlyLoadFactorPct} benchmark={m.nationalLoadFactorPct} />
-        <dl className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
+        <dl className="grid grid-cols-[1fr_auto] gap-x-6 gap-y-1 text-sm">
           <dt className="text-muted">Passengers, 12 months</dt>
-          <dd className="font-semibold">{compact(m.passengers12m)}</dd>
+          <dd className="text-right font-semibold">{compact(m.passengers12m)}</dd>
           <dt className="text-muted">Passenger growth</dt>
-          <dd className="font-semibold">{signedPct(m.passengerGrowthPct)}</dd>
+          <dd className="text-right font-semibold">{signedPct(m.passengerGrowthPct)}</dd>
           <dt className="text-muted">Seat growth</dt>
-          <dd className="font-semibold">{signedPct(m.seatGrowthPct)}</dd>
+          <dd className="text-right font-semibold">{signedPct(m.seatGrowthPct)}</dd>
           <dt className="text-muted">Flight growth</dt>
-          <dd className="font-semibold">{signedPct(m.flightGrowthPct)}</dd>
+          <dd className="text-right font-semibold">{signedPct(m.flightGrowthPct)}</dd>
           <dt className="text-muted">Supply gap</dt>
-          <dd className="font-semibold">{pts(m.supplyGapPts)}</dd>
+          <dd className="text-right font-semibold">{pts(m.supplyGapPts)}</dd>
           <dt className="text-muted">Delayed 15+ min</dt>
-          <dd className="font-semibold">{pct(m.delayRatePct)}</dd>
+          <dd className="text-right font-semibold">{pct(m.delayRatePct)}</dd>
         </dl>
       </div>
 

@@ -239,8 +239,8 @@ export function Chat() {
               onChange={(e) => setDraft(e.target.value)}
               onKeyDown={onKeyDown}
               maxLength={2000}
-              placeholder={voice.listening ? 'Listening...' : 'Ask about an airport or a region'}
-              className="max-h-40 min-h-10 flex-1 resize-none bg-transparent py-2 text-[15px] outline-none placeholder:text-muted"
+              placeholder={voice.listening ? 'Listening...' : 'Ask about any US airport'}
+              className="max-h-40 min-h-10 min-w-0 flex-1 resize-none bg-transparent py-2 text-[15px] outline-none [field-sizing:content] placeholder:text-muted"
             />
             {voice.supported && (
               <button

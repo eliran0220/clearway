@@ -1,6 +1,6 @@
 # Clearway design
 
-Clearway is an AI agent that helps analysts at an airport-modernization investor find US airports where more terminal capacity is likely to pay off. This note covers the scoring methodology, the key tradeoffs and where AI is used.
+Clearway is an AI agent that helps analysts at an airport-modernization investor find US airports where more terminal capacity is likely to pay off. This note covers how we built it, the architecture and stack, the scoring methodology, where AI is used, testing, tradeoffs and limits. For a one-page overview, see the [Clearway brief](Clearway-Brief.pdf).
 
 ## 1. Problem and scope
 
@@ -8,15 +8,28 @@ The brief asks for airports "where renovations will be most profitable based on 
 
 Clearway therefore ranks and compares airports on demand pressure and explains why. It does not estimate ROI, construction cost or feasibility; a high score means "worth a terminal-capacity study", and the agent says so whenever it is asked about returns.
 
-## 2. Architecture
+## 2. How we built it
 
-- **Web app:** Next.js on Vercel (chat, tool cards, browser voice).
-- **API:** Hono on AWS Lambda behind a streaming Function URL, deployed with SST to us-east-2.
-- **Daily job:** EventBridge (SST `CronV2`) at 06:15 UTC upserts the newest BTS monthly airport traffic.
-- **Database:** Postgres on Neon (AWS us-east-2), Drizzle ORM, HTTP driver (no connection pool in Lambda).
-- **Agent:** Claude via the Vercel AI SDK with typed tools. The model chooses tools and explains results; it never computes numbers.
+1. **Research and plan.** We surveyed free public aviation sources and cross-checked the findings with a second model (ChatGPT) before choosing any.
+2. **Proof of concept.** A separate POC called the real endpoints (BTS traffic API, BTS file exports, FAA status, NOAA weather) to confirm fields, coverage and freshness. It showed that no free API has route distances or delay causes, so those two sources are official file imports.
+3. **Implementation plan.** The POC results went into one plan covering architecture, scoring, data windows, deployment and tests, with each decision recorded.
+4. **Build and verify.** Built in stages, each checked by the tests in section 8, then architecture, implementation and code reviews before delivery.
 
-## 3. Data and windows
+## 3. Architecture and stack
+
+Live: web app at [clearway-jade.vercel.app](https://clearway-jade.vercel.app); API and daily job on AWS us-east-2.
+
+| Layer | Choice | Why | Instead of |
+| --- | --- | --- | --- |
+| Web app | Next.js, React and Tailwind on Vercel; browser speech for voice | A preview per push; tool results render as cards; no audio leaves the browser | A single-page app on S3: more wiring. Server transcription: cost for a bonus feature |
+| API | Hono on AWS Lambda behind a streaming Function URL, deployed with SST | Fast start, streams answers, pay per request | A server on EC2 or Fargate: always-on cost |
+| Agent | Claude Sonnet via the Vercel AI SDK, tools typed with Zod | A bounded tool loop that streams into the UI | LangChain: more than one tool loop needs. RAG: answers are calculations over tables, not document search |
+| Scoring | Plain TypeScript in `packages/core`, unit-tested | Deterministic and explainable component by component | Ranking by the model: not reproducible |
+| Daily job | EventBridge schedule (SST `CronV2`) at 06:15 UTC | Upserts the newest BTS month with no server running | |
+| Database | Postgres on Neon (AWS us-east-2), Drizzle ORM, HTTP driver | Relational airport-by-month data, SQL totals, no connection pool in Lambda, scales to zero | Aurora Serverless v2: all-AWS but resumes in about 15 to 30 s. MongoDB: the data is tabular and joined |
+| Language and repo | TypeScript, npm workspaces | One language and shared types; no extra tooling | Python: stronger data tools, but a second language and deploy |
+
+## 4. Data and windows
 
 | Source | Access | Latest month seen (22 Oct 2026) |
 | --- | --- | --- |
@@ -26,7 +39,7 @@ Clearway therefore ranks and compares airports on demand pressure and explains w
 
 Comparisons that combine sources use the same 12 complete months for every airport (default May 2025 to April 2026, against the 12 months before for growth). An airport missing months is shown as not scored, never zero-filled. A single-source question may use that source's latest 12 months, labeled.
 
-## 4. Methodology (screening-v1)
+## 5. Methodology (screening-v1)
 
 Formulas live in `packages/core` with unit tests. Summary:
 
@@ -41,7 +54,7 @@ Formulas live in `packages/core` with unit tests. Summary:
 
 Score weights and ranges are illustrative and uncalibrated; the score ignores airport size, so each ranked airport also reports its 12-month passengers and the user can raise the eligibility threshold. Calibration decision: "planes are full" was first a fixed 85%, but real SFO monthly load factors run 80 to 85%, so it is now measured against the national load factor for the same months instead of a chosen number. The ranking formula was kept as is, so it stays explainable component by component.
 
-## 5. Where AI is used
+## 6. Where AI is used
 
 Claude (Sonnet, through the Vercel AI SDK) does three things: understands the question, chooses and parameterizes tools, and explains the results. It does not compute, estimate or recall numbers. Everything numeric comes from the tools.
 
@@ -67,7 +80,7 @@ Every tool returns the same evidence envelope (period, sources with retrieval ti
 
 **Conversation hygiene.** Earlier turns' reasoning (thinking) blocks are dropped before a conversation is sent again: each is signed for the request that produced it and is rejected if replayed. Tool calls and results are kept. The system prompt carries today's date so the model can judge whether a live notice is current.
 
-## 6. Interface and voice
+## 7. Interface and voice
 
 One page. The empty state offers the four exam questions. Each answer shows the tools the agent ran (a short trail), the direct answer, a card per result, then the explanation. The cards are: ranking with score components, congestion table with delay causes, long-haul ring with threshold and scope controls, demand-pressure signals with the monthly load factor against the national line, traffic table, and live FAA and weather. Every card ends with its evidence: period, confidence, sources (live API, daily API, official file or curated) with retrieval time, assumptions and warnings. Controls on a card do not recalculate in the browser; they send a follow-up, so the tool recomputes and the evidence stays true.
 
@@ -75,25 +88,33 @@ Voice uses the browser: speech recognition to ask (Chrome, Edge, Safari; hidden 
 
 Look: the Horizon palette (midnight, indigo, sky), Public Sans (the US government's design-system typeface, fitting for federal data), the gradient kept to the logo, the send button and the long-haul ring. Light and dark follow the system setting.
 
-## 7. Testing
+## 8. Testing
 
 - **Unit tests** (98): every formula and the score in `packages/core`, the CSV, BTS and import mappers, the FAA and METAR parsers (including NOTAM validity windows), alias and region resolution, the provenance check, the chat request checks, and the web app's number formatting. CI runs them with the typecheck and a production build of the web app.
 - **Evaluation** (`npm run eval`): the four exam questions, three follow-ups and an out-of-scope question against the real data and model; a turn fails on a missing tool or argument, or on any number in the answer that no tool returned. 8 of 8 pass.
 - **Sanity check** (`npm run smoke`): after a change or a deploy, checks the API is up, the data is loaded, CORS admits the web app, bad requests are refused, and each exam question runs its tool end to end. It takes about two minutes and costs four model calls.
 - **Browser pass**: all questions, follow-ups and card controls run in Chrome at desktop and phone width, in light and dark. It found and fixed an FAA closure misread as expired (the feed's own dates have no year; the NOTAM's validity window is now parsed), internal names leaking into answers, chart colors too close in dark mode and a ranking row that hid passenger counts.
 
-## 8. Tradeoffs and decisions
+## 9. Tradeoffs and decisions
 
 | Decision | Why | Alternative |
 | --- | --- | --- |
 | API + official file imports | No free API has route distances or delay causes per airport | API-only would drop two of the four sample questions |
 | BTS traffic stored by a daily job, not fetched per question | BTS publishes monthly; one ranking needs two years of many airports plus a national total, which is many paged API calls; stored data answers in milliseconds and survives a BTS outage | Per-question API calls: no fresher, much slower, and fragile. FAA and NOAA, which change by the minute, are fetched per question |
-| Neon over Aurora Serverless v2 | Free, fast wake-up, HTTP driver for Lambda; Aurora resumes in about 15 to 30 s | Aurora for an all-AWS production client: same Postgres, change the connection string |
 | Lambda region us-east-2 | Neon project is in us-east-2 | |
 | CORS in Hono only | The Function URL's default CORS plus middleware would send duplicate headers | |
-| npm workspaces | No extra tooling on Node 26 | pnpm |
-| Browser voice first | Free and no backend; server transcription only if browser voice falls short | |
 | Fixed score ranges | A score does not change when other airports are added | Min-max within the group |
 | "Planes are full" vs national load factor | A measured benchmark for the same months instead of a fixed 85% | Percentile scoring of every component against all US airports: more statistical, harder to explain |
 | Route rows pre-summed in SQL | A busy airport has tens of thousands of carrier, aircraft and month rows; the long-haul math needs only totals per destination | All aggregation in TypeScript: simpler, but slow over the HTTP driver |
 | Per-instance rate limit | No extra infrastructure for a demo; the Anthropic spend limit is the hard cap | A shared limit (WAF or a Redis counter) for production |
+
+## 10. Strengths and limits
+
+- **Strengths.** Every number traces to a source, a period and a formula. Answers state their assumptions, confidence and what the data cannot show. Running cost is close to the model calls alone. Small surface: one language, one repo, CI on every push.
+- **Limits.** A screening tool, not an ROI model: public data has no construction costs or airport revenues. Route and delay files are refreshed by hand; only traffic refreshes daily. Score weights are reasoned, not calibrated against past terminal projects. The rate limit is per Lambda instance; production would add a shared limit and sign-in. Browser voice works in Chrome, Edge and Safari, not Firefox.
+
+## 11. What we'd build next
+
+- **Watchlist alerts.** Analysts follow airports or regions; when BTS publishes a new month, the existing daily job emails or posts to Slack only what changed ("Portland moved from 3rd to 2nd"), so nobody re-asks the same questions each month.
+- **One-click committee memo.** Export any answer as a PDF or Word memo with its cards, sources and assumptions, so numbers reach the investment committee with their evidence attached.
+- **FAA forecasts in the score.** Add the FAA Terminal Area Forecast so the ranking weighs projected demand over the next decade, not only the last two years: the closest public data gets to "most profitable".

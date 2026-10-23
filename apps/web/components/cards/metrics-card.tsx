@@ -9,7 +9,13 @@ export function MetricsCard({ envelope }: { envelope: Envelope<MetricsData> }) {
   return (
     <Card title={`Traffic: ${d.airports.map((a) => a.airport).join(', ')}`} envelope={envelope}>
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[36rem] text-sm">
+        <table className="w-full min-w-[36rem] table-fixed text-sm">
+          <colgroup>
+            <col className="w-[32%]" />
+            {COLUMNS.map((c) => (
+              <col key={c} />
+            ))}
+          </colgroup>
           <thead>
             <tr className="text-xs text-muted">
               <th className="pb-2 pr-3 text-left font-medium">Airport</th>
@@ -23,7 +29,7 @@ export function MetricsCard({ envelope }: { envelope: Envelope<MetricsData> }) {
           <tbody>
             {d.airports.map((a) => (
               <tr key={a.airport} className="border-t border-line">
-                <td className="max-w-0 py-2 pr-3">
+                <td className="py-2 pr-3">
                   <span className="block font-semibold">{a.airport}</span>
                   <span className="block truncate text-xs text-muted" title={a.name ?? undefined}>
                     {a.name ?? ''}

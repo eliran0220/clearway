@@ -21,7 +21,8 @@ export function CongestionCard({ envelope }: { envelope: Envelope<CongestionData
   const d = envelope.data;
   return (
     <Card title={`Congestion: ${d.airports.map((a) => a.airport).join(' and ')}`} envelope={envelope}>
-      <div className="overflow-x-auto">
+      {/* -mx-2 px-2 gives the highlight room to bleed without making the scroll box overflow. */}
+      <div className="-mx-2 overflow-x-auto px-2">
         {/* Both tables in this card share these columns, so each airport's numbers line up from top to bottom. */}
         <table className="w-full min-w-[22rem] table-fixed text-sm">
           <colgroup>
@@ -86,7 +87,7 @@ export function CongestionCard({ envelope }: { envelope: Envelope<CongestionData
           ))}
         </div>
         {/* The legend doubles as the values table, so no number lives only in a color. */}
-        <div className="mt-3 overflow-x-auto">
+        <div className="-mx-2 mt-3 overflow-x-auto px-2">
           <table className="w-full min-w-[22rem] table-fixed text-xs">
             <colgroup>
               <col />

@@ -63,6 +63,7 @@ export function resolveRegion(input: string): Region | null {
 export interface AliasMatch {
   codes: string[];
   assumptions: string[];
+  spans: [number, number][]; // where each alias sits in the text, so the rest of a list can be looked up by name
 }
 
 const LA_ASSUMPTION = 'Took "LA" to mean LAX. Burbank (BUR), Long Beach (LGB), Ontario (ONT) and Santa Ana (SNA) also serve the area.';
@@ -85,16 +86,50 @@ const ALIASES: { pattern: RegExp; codes: string[]; assumption?: string }[] = [
  * with the assumption said out loud when a city has several airports.
  */
 export function matchAliases(text: string): AliasMatch {
-  const hits: { index: number; codes: string[]; assumption?: string }[] = [];
+  const hits: { index: number; end: number; codes: string[]; assumption?: string }[] = [];
   for (const a of ALIASES) {
     const m = a.pattern.exec(text);
-    if (m) hits.push({ index: m.index, codes: a.codes, assumption: a.assumption });
+    if (m) hits.push({ index: m.index, end: m.index + m[0].length, codes: a.codes, assumption: a.assumption });
   }
   hits.sort((x, y) => x.index - y.index);
   return {
     codes: [...new Set(hits.flatMap((h) => h.codes))],
     assumptions: [...new Set(hits.map((h) => h.assumption).filter((a): a is string => Boolean(a)))],
+    spans: hits.map((h) => [h.index, h.end]),
   };
+}
+
+const LIST_SEPARATOR = /\s*(?:[,;&/]|\band\b|\bvs\b\.?|\bversus\b)\s*/gi;
+
+/** The places in a list ("La Guardia, Newark", "Boston and Providence"), with where each sits in the text. */
+export function listedPlaces(text: string): { text: string; start: number; end: number }[] {
+  const places: { text: string; start: number; end: number }[] = [];
+  const add = (from: number, to: number) => {
+    const raw = text.slice(from, to);
+    const trimmed = raw.trim();
+    if (trimmed) {
+      const start = from + raw.indexOf(trimmed);
+      places.push({ text: trimmed, start, end: start + trimmed.length });
+    }
+  };
+  let from = 0;
+  for (const m of text.matchAll(LIST_SEPARATOR)) {
+    const at = m.index ?? from;
+    add(from, at);
+    from = at + m[0].length;
+  }
+  add(from, text.length);
+  return places;
+}
+
+/**
+ * Places in a list that neither a city alias nor a typed code accounts for ("La Guardia" in
+ * "La Guardia and JFK"). Each is looked up by name, so it is not silently dropped.
+ */
+export function unmatchedPlaces(text: string, aliases: AliasMatch): string[] {
+  return listedPlaces(text)
+    .filter((p) => !aliases.spans.some(([s, e]) => s < p.end && e > p.start) && !/\b[A-Z0-9]{3}\b/.test(p.text))
+    .map((p) => p.text);
 }
 
 const TYPE_RANK: Record<string, number> = { large_airport: 3, medium_airport: 2, small_airport: 1 };

@@ -32,7 +32,7 @@ export function LoadFactorLine({ months, benchmark, height = 64 }: { months: Mon
           <span>{monthLabel(last)}</span>
         </span>
         <span className="block">
-          Monthly {low}% to {peak}%{benchmark != null && <>; dashed line: national {benchmark}%</>}
+          Seats filled: {low}% to {peak}%{benchmark != null && <>; dashed line: national {benchmark}%</>}
         </span>
       </figcaption>
     </figure>

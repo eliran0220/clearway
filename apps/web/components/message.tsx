@@ -54,7 +54,7 @@ function doneLabel(name: string, part: ToolPart): string {
 
 interface Step {
   key: string;
-  state: 'running' | 'done' | 'failed';
+  state: 'running' | 'done' | 'failed' | 'empty'; // empty: an airport lookup that found nothing
   label: string;
   title?: string;
   codes?: string[]; // set on airport lookups that can merge with the next one
@@ -62,7 +62,10 @@ interface Step {
 
 const listCodes = (codes: string[]) => (codes.length <= 2 ? codes.join(' and ') : `${codes.slice(0, -1).join(', ')} and ${codes.at(-1)}`);
 
-/** One step per tool call, except that back-to-back airport lookups read as a single "Found LAX and SNA". */
+/**
+ * One step per tool call, except that back-to-back airport lookups read as a single "Found LAX and SNA",
+ * and a lookup that found nothing is dropped once a later lookup succeeds (the agent retried).
+ */
 function stepsOf(parts: ToolPart[]): Step[] {
   const steps: Step[] = [];
   for (const p of parts) {
@@ -71,7 +74,12 @@ function stepsOf(parts: ToolPart[]): Step[] {
     if (name === 'resolveAirports' && state === 'done') {
       const out = (p.output as Envelope<{ region?: { label?: string } | null; airports?: { code: string }[] }> | undefined)?.data;
       const codes = (out?.airports ?? []).map((a) => a.code);
-      if (!out?.region?.label && codes.length > 0) {
+      if (!out?.region?.label && codes.length === 0) {
+        steps.push({ key: p.toolCallId, state: 'empty', label: doneLabel(name, p) });
+        continue;
+      }
+      if (!out?.region?.label) {
+        while (steps.at(-1)?.state === 'empty') steps.pop();
         const prev = steps.at(-1);
         if (prev?.codes) {
           prev.codes = [...new Set([...prev.codes, ...codes])];
@@ -106,6 +114,7 @@ function ToolTrail({ parts }: { parts: ToolPart[] }) {
           {s.state === 'running' && <LoaderCircle aria-hidden className="size-3.5 animate-spin motion-reduce:animate-none" />}
           {s.state === 'done' && <Check aria-hidden className="size-3.5 text-good" />}
           {s.state === 'failed' && <CircleAlert aria-hidden className="size-3.5" />}
+          {s.state === 'empty' && <CircleAlert aria-hidden className="size-3.5 text-watch" />}
           {s.label}
         </li>
       ))}
@@ -134,11 +143,27 @@ function ResultCard({ part, onAsk, busy }: { part: ToolPart; onAsk: (text: strin
   }
 }
 
-export const textOf = (m: UIMessage) =>
-  m.parts
-    .map((p) => (p.type === 'text' ? (p as { text: string }).text : ''))
-    .join('')
-    .trim();
+const textsIn = (parts: UIMessage['parts']) => parts.flatMap((p) => (p.type === 'text' && (p as { text: string }).text.trim() ? [(p as { text: string }).text] : []));
+
+/** A user message's text. */
+export const textOf = (m: UIMessage) => textsIn(m.parts).join('').trim();
+
+/**
+ * An answer is the text written after the last tool call. Text the model writes between calls
+ * ("that lookup failed, trying again") is working narration, so it is not shown. A run that ends
+ * on a tool call (the step limit) has only that earlier text, so it is shown, paragraphs kept apart.
+ */
+export function answerOf(m: UIMessage, streaming = false): string {
+  let lastTool = -1;
+  m.parts.forEach((p, i) => {
+    if (isToolPart(p as { type: string })) lastTool = i;
+  });
+  const final = textsIn(m.parts.slice(lastTool + 1)).join('').trim();
+  if (final || streaming) return final;
+  return textsIn(m.parts)
+    .map((t) => t.trim())
+    .join('\n\n');
+}
 
 export function Message({ message, streaming, busy, onAsk, onSpeak }: { message: UIMessage; streaming: boolean; busy: boolean; onAsk: (text: string) => void; onSpeak: (text: string) => void }) {
   if (message.role === 'user') {
@@ -150,7 +175,7 @@ export function Message({ message, streaming, busy, onAsk, onSpeak }: { message:
   }
 
   const toolParts = message.parts.filter((p) => isToolPart(p as { type: string })) as unknown as ToolPart[];
-  const text = textOf(message);
+  const text = answerOf(message, streaming);
   const [lead, rest] = splitLead(text);
   const thinking = streaming && !text && toolParts.every((p) => p.state === 'output-available');
 

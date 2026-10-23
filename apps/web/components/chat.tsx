@@ -7,7 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type
 import { API_URL, monthLabel, speakable } from '@/lib/format';
 import { isToolPart, toolNameOf, type ToolPart } from '@/lib/types';
 import { useVoice } from '@/lib/use-voice';
-import { Message, textOf } from './message';
+import { answerOf, Message } from './message';
 import { LogoMark } from './logo';
 import { Methodology } from './methodology';
 
@@ -67,7 +67,7 @@ export function Chat() {
     if (status !== 'ready' || !voiceTurn.current) return;
     voiceTurn.current = false;
     const last = messages.at(-1);
-    if (last?.role === 'assistant') voice.speak(speakable(textOf(last)));
+    if (last?.role === 'assistant') voice.speak(speakable(answerOf(last)));
   }, [status, messages, voice]);
 
   // Follow the answer as it streams, but only while the reader is at the bottom: scrolling up to read

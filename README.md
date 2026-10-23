@@ -15,7 +15,7 @@ Built for the Deloitte Digital Forward Deployed Engineer exercise "Airport Inves
 
 ## Quality
 
-102 unit tests (`npm test`), an agent evaluation of the exam questions and follow-ups that fails any answer quoting a number no tool returned (`npm run eval`, 8 of 8), and a sanity check against local or live URLs (`npm run smoke`). CI runs the typecheck, the tests and a production build of the web app on every push.
+106 unit tests (`npm test`), an agent evaluation of the exam questions and follow-ups that fails any answer quoting a number no tool returned (`npm run eval`, 8 of 8), and a sanity check against local or live URLs (`npm run smoke`). CI runs the typecheck, the tests and a production build of the web app on every push.
 
 ## Layout
 

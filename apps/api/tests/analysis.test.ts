@@ -5,11 +5,13 @@ import {
   distanceBands,
   foreignAirportWarnings,
   higherPerMetric,
+  listedPlaces,
   matchAliases,
   normalizeCodes,
   rankBySize,
   resolveRegion,
   toCoreDelayRows,
+  unmatchedPlaces,
   windowsEndingAt,
 } from '../src/agent/analysis';
 
@@ -144,5 +146,21 @@ describe('edge cases found in the bug hunt', () => {
     const w = foreignAirportWarnings(rows, ['LHR', 'SJU', 'SFO', 'XXX']);
     expect(w).toHaveLength(1);
     expect(w[0]).toContain('LHR is outside the US');
+  });
+
+  it('splits a list of places, keeping names with spaces whole', () => {
+    expect(listedPlaces('La Guardia, Newark').map((p) => p.text)).toEqual(['La Guardia', 'Newark']);
+    expect(listedPlaces('Boston and Providence vs. Hartford').map((p) => p.text)).toEqual(['Boston', 'Providence', 'Hartford']);
+    expect(listedPlaces('Dallas/Fort Worth').map((p) => p.text)).toEqual(['Dallas', 'Fort Worth']);
+    expect(listedPlaces('Portland International Jetport').map((p) => p.text)).toEqual(['Portland International Jetport']);
+    expect(listedPlaces('  Newark ,  ')).toEqual([{ text: 'Newark', start: 2, end: 8 }]);
+  });
+
+  it('looks up names listed beside a code or a city alias instead of dropping them', () => {
+    expect(unmatchedPlaces('La Guardia and JFK', matchAliases('La Guardia and JFK'))).toEqual(['La Guardia']);
+    expect(unmatchedPlaces('LA and Burbank', matchAliases('LA and Burbank'))).toEqual(['Burbank']);
+    expect(unmatchedPlaces('LA and Santa Ana', matchAliases('LA and Santa Ana'))).toEqual([]);
+    expect(unmatchedPlaces('Washington, DC and Boston', matchAliases('Washington, DC and Boston'))).toEqual([]);
+    expect(unmatchedPlaces('SFO, OAK', matchAliases('SFO, OAK'))).toEqual([]);
   });
 });

@@ -120,10 +120,14 @@ export async function airportsInRegions(db: Db, regions: string[]) {
 /** Name or city search among airports with scheduled service. Callers rank the matches by size. */
 export async function searchAirports(db: Db, text: string, limit = 25) {
   const pattern = `%${text.replace(/[%_\\]/g, (c) => `\\${c}`)}%`;
+  // Second chance with spaces and punctuation ignored, so "La Guardia" finds "LaGuardia Airport".
+  // Letters and digits only, so nothing in it is a LIKE wildcard; very short text would match too much.
+  const squeezed = text.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const bySqueezedName = squeezed.length >= 4 ? [like(sql`regexp_replace(lower(${airports.name}), '[^a-z0-9]', '', 'g')`, `%${squeezed}%`)] : [];
   return db
     .select()
     .from(airports)
-    .where(and(eq(airports.scheduledService, true), or(ilike(airports.name, pattern), ilike(airports.city, pattern))))
+    .where(and(eq(airports.scheduledService, true), or(ilike(airports.name, pattern), ilike(airports.city, pattern), ...bySqueezedName)))
     .orderBy(asc(airports.iata))
     .limit(limit);
 }

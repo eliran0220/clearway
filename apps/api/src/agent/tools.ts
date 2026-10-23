@@ -28,11 +28,13 @@ import {
   distanceBands,
   foreignAirportWarnings,
   higherPerMetric,
+  listedPlaces,
   matchAliases,
   normalizeCodes,
   rankBySize,
   resolveRegion,
   toCoreDelayRows,
+  unmatchedPlaces,
   windowsEndingAt,
 } from './analysis';
 import { inForceAt, type FaaStatus, type Metar } from './feeds';
@@ -86,7 +88,7 @@ export function createTools(getDb: () => Db) {
   return {
     resolveAirports: tool({
       description:
-        'Turn airport names, cities, IATA codes or a region (e.g. "New England", "Texas", "CA, OR") into airport codes. Call this first whenever the user names places instead of codes. Returns any assumption made (for example that "LA" means LAX).',
+        'Turn airport names, cities, IATA codes or a region (e.g. "New England", "Texas", "CA, OR") into airport codes. Several places can go in one call ("La Guardia, Newark"). Call this first whenever the user names places instead of codes. Returns any assumption made (for example that "LA" means LAX).',
       inputSchema: z.object({ query: z.string().min(1).max(200) }),
       execute: async ({ query }) => {
         const db = getDb();
@@ -106,15 +108,38 @@ export function createTools(getDb: () => Db) {
           );
         }
         const assumptions: string[] = [...aliases.assumptions];
+        const warnings: string[] = [];
         let codes = [...aliases.codes, ...typedCodes];
         let rows = await repo.airportsByCodes(db, codes);
         let confidence: 'high' | 'medium' = 'high';
+        // Names listed beside codes or city aliases ("La Guardia and JFK") are looked up one by one.
+        let names = rows.length > 0 ? unmatchedPlaces(query, aliases) : [];
         if (rows.length === 0) {
           rows = rankBySize(await repo.searchAirports(db, query.trim())).slice(0, 5);
           codes = rows.map((r) => r.iata);
           if (rows.length > 1) {
             confidence = 'medium';
             assumptions.push(`Several airports match "${query.trim()}"; listed largest first. Ask the user if the first is not the one they meant.`);
+          }
+          // A list that matches nothing as a whole ("La Guardia, Newark") is looked up place by place.
+          const places = listedPlaces(query);
+          if (rows.length === 0 && places.length > 1) names = places.map((p) => p.text);
+        }
+        for (const name of names) {
+          const matches = rankBySize(await repo.searchAirports(db, name));
+          const top = matches[0];
+          if (!top) {
+            confidence = 'medium';
+            warnings.push(`No airport matched "${name}".`);
+            continue;
+          }
+          if (matches.length > 1) {
+            confidence = 'medium';
+            assumptions.push(`Took "${name}" to mean ${top.iata} (${top.name}), the largest of the airports matching that name. Ask the user if they meant another.`);
+          }
+          if (!codes.includes(top.iata)) {
+            codes.push(top.iata);
+            rows.push(top);
           }
         }
         const found = new Set(rows.map((r) => r.iata));
@@ -127,7 +152,7 @@ export function createTools(getDb: () => Db) {
             confidence,
             assumptions,
             // Uppercase words that are not airports (e.g. "AND") are simply dropped.
-            warnings: ordered.length === 0 ? [`No airport matched "${query}".`] : [],
+            warnings: ordered.length === 0 ? [`No airport matched "${query}".`] : warnings,
           },
         );
       },

@@ -2,7 +2,9 @@ import type { Envelope, MetricsData } from '@/lib/types';
 import { compact, pct, pts, signedPct } from '@/lib/format';
 import { Card } from '../card';
 
-const COLUMNS = ['Passengers', 'Growth', 'Flight growth', 'Seat growth', 'Supply gap', 'Load factor'];
+// The three growth columns share one header, so each column's own label stays short enough to fit.
+const GROWTH = ['Passengers', 'Flights', 'Seats'];
+const single = 'whitespace-nowrap pb-2 pl-3 text-right align-bottom font-medium';
 
 export function MetricsCard({ envelope }: { envelope: Envelope<MetricsData> }) {
   const d = envelope.data;
@@ -12,16 +14,32 @@ export function MetricsCard({ envelope }: { envelope: Envelope<MetricsData> }) {
         <table className="w-full min-w-[36rem] table-fixed text-sm">
           <colgroup>
             <col className="w-[32%]" />
-            {COLUMNS.map((c) => (
-              <col key={c} />
+            {Array.from({ length: 6 }, (_, i) => (
+              <col key={i} />
             ))}
           </colgroup>
-          <thead>
-            <tr className="text-xs text-muted">
-              <th className="pb-2 pr-3 text-left font-medium">Airport</th>
-              {COLUMNS.map((c) => (
-                <th key={c} className="whitespace-nowrap pb-2 pl-3 text-right font-medium">
-                  {c}
+          <thead className="text-xs text-muted">
+            <tr>
+              <th rowSpan={2} scope="col" className="pb-2 pr-3 text-left align-bottom font-medium">
+                Airport
+              </th>
+              <th rowSpan={2} scope="col" className={single}>
+                Passengers
+              </th>
+              <th colSpan={3} scope="colgroup" className="pb-1 pl-3 text-center font-medium">
+                <span className="block border-b border-line pb-1">Growth, year over year</span>
+              </th>
+              <th rowSpan={2} scope="col" className={single}>
+                Supply gap
+              </th>
+              <th rowSpan={2} scope="col" className={single}>
+                Load factor
+              </th>
+            </tr>
+            <tr>
+              {GROWTH.map((g) => (
+                <th key={g} scope="col" className={single}>
+                  {g}
                 </th>
               ))}
             </tr>

@@ -1,7 +1,11 @@
 // Checks that every number in an answer appears in the tool results (or the question).
 // Used by the evaluation run; pure so it is unit-tested.
 
-const NUMBER = /[-−]?\d[\d,]*(?:\.\d+)?/g;
+// Prose numbers may use thousands separators ("36,075"); only groups of exactly three digits count, so
+// "3,000" is one number and "3000,5000" is two. Tool results are JSON, which can hold both prose in
+// strings ("Under 1,500 km") and plain lists ("[3000,5000]"), so they are read both ways.
+const PROSE_NUMBER = /[-−]?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?/g;
+const JSON_NUMBER = /-?\d+(?:\.\d+)?/g;
 
 /** Normalizes "1,234.50" -> "1234.5", "18.0" -> "18", unicode minus -> "-". */
 export function normalizeNumber(raw: string): string {
@@ -16,7 +20,11 @@ const NOT_DATA = [/\blower 48\b/gi];
 
 export function numbersIn(text: string): string[] {
   const cleaned = NOT_DATA.reduce((t, re) => t.replace(re, ' '), text);
-  return (cleaned.match(NUMBER) ?? []).map(normalizeNumber);
+  return (cleaned.match(PROSE_NUMBER) ?? []).map(normalizeNumber);
+}
+
+function numbersInJson(json: string): string[] {
+  return (json.match(JSON_NUMBER) ?? []).map(normalizeNumber);
 }
 
 /** Small counts (list numbering, "12 months"), the score scale ("out of 100") and years are not data claims. */
@@ -37,8 +45,10 @@ function isIgnorable(n: string): boolean {
 export function unsupportedNumbers(answer: string, evidence: unknown[]): string[] {
   const known = new Set<string>();
   for (const e of evidence) {
-    const text = typeof e === 'string' ? e : JSON.stringify(e);
-    for (const n of numbersIn(text)) {
+    // The question is prose; tool inputs and outputs are JSON, read as prose and as JSON values.
+    const json = typeof e === 'string' ? null : JSON.stringify(e);
+    const found = json == null ? numbersIn(e as string) : [...numbersIn(json), ...numbersInJson(json)];
+    for (const n of found) {
       known.add(n);
       known.add(n.replace(/^-/, ''));
     }

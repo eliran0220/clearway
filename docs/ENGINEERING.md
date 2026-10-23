@@ -90,7 +90,7 @@ Look: the Horizon palette (midnight, indigo, sky), Public Sans (the US governmen
 
 ## 8. Testing
 
-- **Unit tests** (100): every formula and the score in `packages/core`, the CSV, BTS and import mappers, the FAA and METAR parsers (including NOTAM validity windows), alias and region resolution, the provenance check, the chat request checks, and the web app's number formatting. CI runs them with the typecheck and a production build of the web app.
+- **Unit tests** (102): every formula and the score in `packages/core`, the CSV, BTS and import mappers, the FAA and METAR parsers (including NOTAM validity windows), alias and region resolution, the provenance check, the chat request checks, and the web app's number formatting. CI runs them with the typecheck and a production build of the web app.
 - **Evaluation** (`npm run eval`): the four exam questions, three follow-ups and an out-of-scope question against the real data and model; a turn fails on a missing tool or argument, or on any number in the answer that no tool returned. 8 of 8 pass.
 - **Sanity check** (`npm run smoke`): after a change or a deploy, checks the API is up, the data is loaded, CORS admits the web app, bad requests are refused, and each exam question runs its tool end to end. It takes about two minutes and costs four model calls.
 - **Browser pass**: all questions, follow-ups and card controls run in Chrome at desktop and phone width, in light and dark. It found and fixed an FAA closure misread as expired (the feed's own dates have no year; the NOTAM's validity window is now parsed), internal names leaking into answers, chart colors too close in dark mode and a ranking row that hid passenger counts.

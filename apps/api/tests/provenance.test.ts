@@ -51,3 +51,13 @@ describe('names that contain numbers', () => {
     expect(unsupportedNumbers('48 departures', [{ departures: 156 }])).toEqual(['48']);
   });
 });
+
+describe('lists of numbers in tool results', () => {
+  it('reads [3000,5000] as two numbers, so "3,000 km" is supported', () => {
+    expect(unsupportedNumbers('I can re-run at 3,000 km or 5,000 km.', [{ otherThresholdsKm: [3000, 5000] }])).toEqual([]);
+    expect(unsupportedNumbers('36,075 of 87,249 departures', [{ a: 36075, b: 87249 }])).toEqual([]);
+    expect(numbersIn('3000,5000')).toEqual(['3000', '5000']);
+    expect(unsupportedNumbers('Under 1,500 km: 43.4%', [{ bands: [{ label: 'Under 1,500 km', sharePct: 43.4 }] }])).toEqual([]);
+    expect(unsupportedNumbers('values 1 and 234', [{ list: [1, 234] }])).toEqual([]);
+  });
+});

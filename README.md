@@ -4,7 +4,7 @@ An AI agent that helps analysts screen US airports for terminal investment. Clau
 
 **Live demo: [clearway-jade.vercel.app](https://clearway-jade.vercel.app)** (no sign-in; 20 questions per 10 minutes per visitor).
 
-Built for the Deloitte Digital Forward Deployed Engineer exercise "Airport Investment Intelligence Agent". In brief: [docs/SUMMARY.md](docs/SUMMARY.md). Design and tradeoffs: [docs/DESIGN.md](docs/DESIGN.md).
+Built for the Deloitte Digital Forward Deployed Engineer exercise "Airport Investment Intelligence Agent". In brief: [docs/SUMMARY.md](docs/SUMMARY.md) (also as a [two-page PDF](docs/Clearway-Summary.pdf)). Design and tradeoffs: [docs/DESIGN.md](docs/DESIGN.md).
 
 ## Status
 
